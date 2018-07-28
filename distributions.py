@@ -30,33 +30,229 @@ if not os.path.isfile(input_file):
 # Read all branches
 rdf = RDF(treename, input_file)
 
+# default parameters
+detailsLevel         = 0 	    # 0: no details, 1: some details, >= 2 all details
+overrideCutSelection = False	# whether the default cut selection should be overriden by the command-line selection
+cutSelectionString   = None
+outputDir            = "."
+inputDir             = "."
+input_n_si           = 4.0
+time_group_divisor   = 0
+time_group_remainder = 0
+event_group_divisor  = 0
+event_group_index    = 0
+evIdxStep            = 1
+maxTaggedEvents      = 0	   # 0 means no maximum
+
+# Line 226 - Print parameters
+print("* detailsLevel = %s" % detailsLevel)
+print("* outputDir = %s" % outputDir)
+print("* inputDir = %s" % inputDir)
+print("* input n_si = %s" % input_n_si)
+print("* time_group_divisor = %s" % time_group_divisor)
+print("* time_group_remainder = %s" % time_group_remainder)
+print("* event_group_divisor = %s" % event_group_divisor)
+print("* event_group_index = %s" % event_group_index)
+print("* evIdxStep = %s" % evIdxStep)
+print("* maxTaggedEvents = %s" % maxTaggedEvents)
+
+# Line 237
+initAnalysis="""
+// select cuts
+extern Analysis anal;
+anal.BuildCuts();
+anal.n_si = input_n_si;
+"""
+ROOT.gInterpreter.Declare(initAnalysis)
+
+# Line 241 - Let's start assuming no overrideCutSelection
+# if (overrideCutSelection)
+
+# Line 272
+# print info
+print("\n");
+print("------------------------------ environment ------------------------------\n");
+ROOT.env.Print();
+print("\n");
+print("------------------------------- analysis --------------------------------\n");
+ROOT.anal.Print();
+print("\n");
+
+# Line 281
+# alignment init
+for i,_ in  enumerate(ROOT.alignmentSources):
+	print("\n---------- alignment source %s ----------\n" % i);
+	ROOT.alignmentSources[i].Init();
+
+print("\n\n");
+
+# Line 289
+# binnings
+binnings = ROOT.vector('string')()
+binnings.push_back("ub");
+binnings.push_back("ob-1-10-0.2");
+binnings.push_back("ob-1-30-0.2");
+
+# Line 327
+# get time-dependent corrections
+corrg_pileup = None
+if ROOT.anal.use_pileup_efficiency_fits:
+	path = inputDir + "/pileup_fit_combined.root"
+	puF = ROOT.TFile.Open(path)
+	if not os.path.exists(puF):
+		print("ERROR: pile-up correction file `%s' cannot be opened.\n" % path);
+	if diagonal == "d45b_56t":
+		#corrg_pileup = (TGraph *) puF.Get("45b_56t/dgn");
+		corrg_pileup = puF.Get("45b_56t/dgn")
+	if diagonal == "d45t_56b":
+		#corrg_pileup = (TGraph *) puF.Get("45b_56t/dgn");
+		corrg_pileup = puF.Get("45t_56b/dgn")
+
+# Line 358
+# get th_y* dependent efficiency correction
+f_3outof4_efficiency_L_F = None;
+f_3outof4_efficiency_L_N = None;
+f_3outof4_efficiency_R_N = None;
+f_3outof4_efficiency_R_F = None;
+
+if ROOT.anal.use_3outof4_efficiency_fits:
+	path = inputDir + "/eff3outof4_details_fit_old.root"
+	effFile = ROOT.TFile.Open(path)
+	if (os.path.exists(effFile)):
+		print("ERROR: 3-out-of-4 efficiency file `%s' cannot be opened.\n" % path);
+
+	diagonal = selected_diagonal;
+	f_3outof4_efficiency_L_F = effFile.Get(diagonal + "/L_F/fit");
+	f_3outof4_efficiency_L_N = effFile.Get(diagonal + "/L_N/fit");
+	f_3outof4_efficiency_R_N = effFile.Get(diagonal + "/R_N/fit");
+	f_3outof4_efficiency_R_F = effFile.Get(diagonal + "/R_F/fit");
+
+	print("\n>> using 3-out-of-4 fits: %s, %s, %s, %s\n" %
+		(f_3outof4_efficiency_L_F, f_3outof4_efficiency_L_N,
+         f_3outof4_efficiency_R_N, f_3outof4_efficiency_R_F))
+
+# TODO Line 380
+# get unsmearing correction
+
+# Line 394
+# book metadata histograms
+# timestamp_bins = timestamp_max - timestamp_min + 1.;
+
+# Long TODO
+# Lines 397 - 779
+# THistograms, TGraphs and TProfiles declaration
+
+#Line 780
+# zero counters
+n_ev_full = 0;
+n_ev_cut = dict();
+for ci in range(ROOT.anal.N_cuts):
+	n_ev_cut[ci] = 0
+
+th_min = 1E100;
+th_y_L_min = +1E100; th_y_R_min = +1E100
+
+N_anal=0; N_anal_zeroBias=0;
+N_zeroBias_el=0; N_zeroBias_el_RP_trig=0;
+N_4outof4=0; N_el=0;
+N_el_T2trig=0; N_4outof4_T2trig=0;
+N_el_raw=0;
+
+# TODO
+# Line 795
+# map<unsigned int, pair<unsigned int, unsigned int> > runTimestampBoundaries;
+
+
+#########################################################
+###### FILTER, BUILD HISTOGRAMS - START EVENT LOOP ######
+#########################################################
+
+
+# TODO
+# Line 802
+# Initial cuts
+# // remove troublesome runs
+# unsigned int run = ev.run_num / 100000;
+# unsigned int file = ev.run_num % 100000;
+# if (SkipRun(run, file, true))
+# 	continue;
+#
+# // update timestamp run boundaries
+# auto rtbit = runTimestampBoundaries.find(run);
+# if (rtbit == runTimestampBoundaries.end())
+# {
+# 	runTimestampBoundaries.insert({run, {ev.timestamp, ev.timestamp}});
+# } else {
+# 	rtbit->second.first = min(rtbit->second.first, ev.timestamp);
+# 	rtbit->second.second = max(rtbit->second.second, ev.timestamp);
+# }
+#
+# // check time - selected?
+# if (anal.SkipTime(ev.timestamp))
+# 	continue;
+#
+# if (time_group_divisor != 0)
+# {
+# 	double time_group_interval = 1.;	// s
+# 	int time_group = int(ev.timestamp / time_group_interval);
+# 	if ( (time_group % time_group_divisor) != time_group_remainder)
+# 		continue;
+# }
+
 # Diagonal cut (L831)
 f1 = rdf.Filter("v_L_2_F && v_L_2_N && v_R_2_F && v_R_2_N", 'allDiagonalRPs')
+
+# FIXME: N_4outof4_T2trig is not used to produce any plot
+# Line 835
+# if ((ev.trigger_bits & 64) != 0)
+# 	N_4outof4_T2trig++;
+
+# Line 838
+h_timestamp_dgn = f1.Histo1D("timestamp")
+
+# Line 841
+# select the elastic-trigger bunch(es) only
+# if (SkipBunch(run, ev.bunch_num))
+#
+# SkipBunch will return False for whatever DS in use,
+# since all of them define keepAllBunches = True within
+# parameters.h
+
+# zero bias event?
+# Create named filter with number of zero bias events
+f2 = f1.Filter("(trigger_bits & 512) != 0", 'zero_bias_event')
+
+# Apply fine alignment (L 852)
+
 
 # run reconstruction (Line 868)
 xs = ["x_L_1_F", "x_L_2_N", "x_L_2_F", "x_R_1_F", "x_R_2_N", "x_R_2_F"]
 ys = ["y_L_1_F", "y_L_2_N", "y_L_2_F", "y_R_1_F", "y_R_2_N", "y_R_2_F"]
 
-# Line 838
-h_timestamp_dgn = f1.Histo1D("timestamp")
-
-## TODO apply fine alignment
-# HitData h_al = ev.h;
-# for (unsigned int i = 0; i < alignmentSources.size(); ++i)
-# {
-# 	AlignmentData alData = alignmentSources[i].Eval(ev.timestamp);
-# 	h_al = h_al.ApplyAlignment(alData);
-# }
+## apply fine alignment
+r2 = f1.Define("h_al", "ApplyFineAlignment( timestamp ,{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})".format(*(xs+ys) )) \
+       .Define("h_al_x_L_1_F", "h_al.L_1_F.x") \
+       .Define("h_al_x_L_2_N", "h_al.L_2_N.x") \
+       .Define("h_al_x_L_2_F", "h_al.L_2_F.x") \
+       .Define("h_al_y_L_1_F", "h_al.L_1_F.y") \
+       .Define("h_al_y_L_2_N", "h_al.L_2_N.y") \
+       .Define("h_al_y_L_2_F", "h_al.L_2_F.y") \
+       .Define("h_al_x_R_1_F", "h_al.R_1_F.x") \
+       .Define("h_al_x_R_2_N", "h_al.R_2_N.x") \
+       .Define("h_al_x_R_2_F", "h_al.R_2_F.x") \
+       .Define("h_al_y_R_1_F", "h_al.R_1_F.y") \
+       .Define("h_al_y_R_2_N", "h_al.R_2_N.y") \
+       .Define("h_al_y_R_2_F", "h_al.R_2_F.y") \
 
 # fill pre-selection histograms (Line 860 - 866)
 # h_al = ev.h
 # so filling a hist with h_al.L_1_F.x equals to use the branch x_L_1_F
-h_y_L_1_F_vs_x_L_1_F_al_nosel = f1.Histo1D("x_L_1_F", "y_L_1_F")
-h_y_L_2_N_vs_x_L_2_N_al_nosel = f1.Histo1D("x_L_2_N", "y_L_2_N")
-h_y_L_2_F_vs_x_L_2_F_al_nosel = f1.Histo1D("x_L_2_F", "y_L_2_F")
-h_y_R_1_F_vs_x_R_1_F_al_nosel = f1.Histo1D("x_R_1_F", "y_R_1_F")
-h_y_R_2_N_vs_x_R_2_N_al_nosel = f1.Histo1D("x_R_2_N", "y_R_2_N")
-h_y_R_2_F_vs_x_R_2_F_al_nosel = f1.Histo1D("x_R_2_F", "y_R_2_F")
+h_y_L_1_F_vs_x_L_1_F_al_nosel = r2.Histo1D("h_al_x_L_1_F", "h_al_y_L_1_F")
+h_y_L_2_N_vs_x_L_2_N_al_nosel = r2.Histo1D("h_al_x_L_2_N", "h_al_y_L_2_N")
+h_y_L_2_F_vs_x_L_2_F_al_nosel = r2.Histo1D("h_al_x_L_2_F", "h_al_y_L_2_F")
+h_y_R_1_F_vs_x_R_1_F_al_nosel = r2.Histo1D("h_al_x_R_1_F", "h_al_y_R_1_F")
+h_y_R_2_N_vs_x_R_2_N_al_nosel = r2.Histo1D("h_al_x_R_2_N", "h_al_y_R_2_N")
+h_y_R_2_F_vs_x_R_2_F_al_nosel = r2.Histo1D("h_al_x_R_2_F", "h_al_y_R_2_F")
 
 # TODO
 #if (detailsLevel >= 2)
@@ -70,7 +266,7 @@ h_y_R_2_F_vs_x_R_2_F_al_nosel = f1.Histo1D("x_R_2_F", "y_R_2_F")
 
 ## Line 877
 ### kinematics struct
-ks = f1.Define("kinematics", 'DoReconstruction( {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})'.format(*(xs+ys) ))
+ks = r2.Define("kinematics", 'DoReconstruction( h_al )')
 
 ks_ext= ks.Define("k_th_x_R",        "kinematics.th_x_R") \
           .Define("k_th_y_R",        "kinematics.th_y_R") \
