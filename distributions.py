@@ -57,13 +57,9 @@ print("* evIdxStep = %s" % evIdxStep)
 print("* maxTaggedEvents = %s" % maxTaggedEvents)
 
 # Line 237
-initAnalysis="""
-// select cuts
-extern Analysis anal;
-anal.BuildCuts();
-anal.n_si = input_n_si;
-"""
-ROOT.gInterpreter.Declare(initAnalysis)
+
+ROOT.anal.BuildCuts()
+ROOT.anal.n_si = input_n_si
 
 # Line 241 - Let's start assuming no overrideCutSelection
 # if (overrideCutSelection)
@@ -245,14 +241,22 @@ r2 = f1.Define("h_al", "ApplyFineAlignment( timestamp ,{}, {}, {}, {}, {}, {}, {
        .Define("h_al_y_R_2_F", "h_al.R_2_F.y") \
 
 # fill pre-selection histograms (Line 860 - 866)
-# h_al = ev.h
-# so filling a hist with h_al.L_1_F.x equals to use the branch x_L_1_F
-h_y_L_1_F_vs_x_L_1_F_al_nosel = r2.Histo1D("h_al_x_L_1_F", "h_al_y_L_1_F")
-h_y_L_2_N_vs_x_L_2_N_al_nosel = r2.Histo1D("h_al_x_L_2_N", "h_al_y_L_2_N")
-h_y_L_2_F_vs_x_L_2_F_al_nosel = r2.Histo1D("h_al_x_L_2_F", "h_al_y_L_2_F")
-h_y_R_1_F_vs_x_R_1_F_al_nosel = r2.Histo1D("h_al_x_R_1_F", "h_al_y_R_1_F")
-h_y_R_2_N_vs_x_R_2_N_al_nosel = r2.Histo1D("h_al_x_R_2_N", "h_al_y_R_2_N")
-h_y_R_2_F_vs_x_R_2_F_al_nosel = r2.Histo1D("h_al_x_R_2_F", "h_al_y_R_2_F")
+
+al_nosel_models = [
+    ("h_y_L_1_F_vs_x_L_1_F_al_nosel", ";x^{L,1,F};y^{L,1,F}", 150, -15., 15., 300, -30., +30.),
+    ("h_y_L_2_N_vs_x_L_2_N_al_nosel", ";x^{L,2,N};y^{L,2,N}", 150, -15., 15., 300, -30., +30.),
+    ("h_y_L_2_F_vs_x_L_2_F_al_nosel", ";x^{L,2,F};y^{L,2,F}", 150, -15., 15., 300, -30., +30.),
+    ("h_y_R_1_F_vs_x_R_1_F_al_nosel", ";x^{R,1,F};y^{R,1,F}", 150, -15., 15., 300, -30., +30.),
+    ("h_y_R_2_N_vs_x_R_2_N_al_nosel", ";x^{R,2,N};y^{R,2,N}", 150, -15., 15., 300, -30., +30.),
+    ("h_y_R_2_F_vs_x_R_2_F_al_nosel", ";x^{R,2,F};y^{R,2,F}", 150, -15., 15., 300, -30., +30.)
+]
+
+h_y_L_1_F_vs_x_L_1_F_al_nosel = r2.Histo2D(al_nosel_models[0], "h_al_x_L_1_F", "h_al_y_L_1_F")
+h_y_L_2_N_vs_x_L_2_N_al_nosel = r2.Histo2D(al_nosel_models[1], "h_al_x_L_2_N", "h_al_y_L_2_N")
+h_y_L_2_F_vs_x_L_2_F_al_nosel = r2.Histo2D(al_nosel_models[2], "h_al_x_L_2_F", "h_al_y_L_2_F")
+h_y_R_1_F_vs_x_R_1_F_al_nosel = r2.Histo2D(al_nosel_models[3], "h_al_x_R_1_F", "h_al_y_R_1_F")
+h_y_R_2_N_vs_x_R_2_N_al_nosel = r2.Histo2D(al_nosel_models[4], "h_al_x_R_2_N", "h_al_y_R_2_N")
+h_y_R_2_F_vs_x_R_2_F_al_nosel = r2.Histo2D(al_nosel_models[5], "h_al_x_R_2_F", "h_al_y_R_2_F")
 
 # TODO
 #if (detailsLevel >= 2)
@@ -314,20 +318,40 @@ ks_ext= ks.Define("k_th_x_R",        "kinematics.th_x_R") \
 # // (SHOULD use hit positions WITHOUT alignment corrections, i.e. ev.h)
 # signed int period = int((ev.timestamp - anal.alignment_t0) / anal.alignment_ts);
 
-# TODO fill histograms at line 1110
-h_y_L_1_F_vs_x_L_1_F_noal_sel = f1.Histo1D("x_L_1_F", "y_L_1_F")
-h_y_L_2_N_vs_x_L_2_N_noal_sel = f1.Histo1D("x_L_2_N", "y_L_2_N")
-h_y_L_2_F_vs_x_L_2_F_noal_sel = f1.Histo1D("x_L_2_F", "y_L_2_F")
-h_y_R_1_F_vs_x_R_1_F_noal_sel = f1.Histo1D("x_R_1_F", "y_R_1_F")
-h_y_R_2_N_vs_x_R_2_N_noal_sel = f1.Histo1D("x_R_2_N", "y_R_2_N")
-h_y_R_2_F_vs_x_R_2_F_noal_sel = f1.Histo1D("x_R_2_F", "y_R_2_F")
+# fill histograms (line 1110)
 
-h_y_L_1_F_vs_x_L_1_F_al_sel = f1.Histo1D("x_L_1_F", "y_L_1_F")
-h_y_L_2_N_vs_x_L_2_N_al_sel = f1.Histo1D("x_L_2_N", "y_L_2_N")
-h_y_L_2_F_vs_x_L_2_F_al_sel = f1.Histo1D("x_L_2_F", "y_L_2_F")
-h_y_R_1_F_vs_x_R_1_F_al_sel = f1.Histo1D("x_R_1_F", "y_R_1_F")
-h_y_R_2_N_vs_x_R_2_N_al_sel = f1.Histo1D("x_R_2_N", "y_R_2_N")
-h_y_R_2_F_vs_x_R_2_F_al_sel = f1.Histo1D("x_R_2_F", "y_R_2_F")
+noal_sel_models = [
+    ("h_y_L_1_F_vs_x_L_1_F_noal_sel", ";x^{L,1,F};y^{L,1,F}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_L_2_N_vs_x_L_2_N_noal_sel", ";x^{L,2,N};y^{L,2,N}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_L_2_F_vs_x_L_2_F_noal_sel", ";x^{L,2,F};y^{L,2,F}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_R_1_F_vs_x_R_1_F_noal_sel", ";x^{R,1,F};y^{R,1,F}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_R_2_N_vs_x_R_2_N_noal_sel", ";x^{R,2,N};y^{R,2,N}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_R_2_F_vs_x_R_2_F_noal_sel", ";x^{R,2,F};y^{R,2,F}", 100, -3., +3., 300, -30., +30.)
+]
+
+h_y_L_1_F_vs_x_L_1_F_noal_sel = f1.Histo2D(noal_sel_models[0], "x_L_1_F", "y_L_1_F")
+h_y_L_2_N_vs_x_L_2_N_noal_sel = f1.Histo2D(noal_sel_models[1], "x_L_2_N", "y_L_2_N")
+h_y_L_2_F_vs_x_L_2_F_noal_sel = f1.Histo2D(noal_sel_models[2], "x_L_2_F", "y_L_2_F")
+h_y_R_1_F_vs_x_R_1_F_noal_sel = f1.Histo2D(noal_sel_models[3], "x_R_1_F", "y_R_1_F")
+h_y_R_2_N_vs_x_R_2_N_noal_sel = f1.Histo2D(noal_sel_models[4], "x_R_2_N", "y_R_2_N")
+h_y_R_2_F_vs_x_R_2_F_noal_sel = f1.Histo2D(noal_sel_models[5], "x_R_2_F", "y_R_2_F")
+
+
+al_sel_models = [
+    ("h_y_L_1_F_vs_x_L_1_F_al_sel", ";x^{L,1,F};y^{L,1,F}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_L_2_N_vs_x_L_2_N_al_sel", ";x^{L,2,N};y^{L,2,N}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_L_2_F_vs_x_L_2_F_al_sel", ";x^{L,2,F};y^{L,2,F}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_R_1_F_vs_x_R_1_F_al_sel", ";x^{R,1,F};y^{R,1,F}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_R_2_N_vs_x_R_2_N_al_sel", ";x^{R,2,N};y^{R,2,N}", 100, -3., +3., 300, -30., +30.),
+    ("h_y_R_2_F_vs_x_R_2_F_al_sel", ";x^{R,2,F};y^{R,2,F}", 100, -3., +3., 300, -30., +30.)
+]
+
+h_y_L_1_F_vs_x_L_1_F_al_sel = f1.Histo2D(al_sel_models[0], "x_L_1_F", "y_L_1_F")
+h_y_L_2_N_vs_x_L_2_N_al_sel = f1.Histo2D(al_sel_models[1], "x_L_2_N", "y_L_2_N")
+h_y_L_2_F_vs_x_L_2_F_al_sel = f1.Histo2D(al_sel_models[2], "x_L_2_F", "y_L_2_F")
+h_y_R_1_F_vs_x_R_1_F_al_sel = f1.Histo2D(al_sel_models[3], "x_R_1_F", "y_R_1_F")
+h_y_R_2_N_vs_x_R_2_N_al_sel = f1.Histo2D(al_sel_models[4], "x_R_2_N", "y_R_2_N")
+h_y_R_2_F_vs_x_R_2_F_al_sel = f1.Histo2D(al_sel_models[5], "x_R_2_F", "y_R_2_F")
 
 # Line 1157 (k.th_x_R - k.th_x_L)
 #           (k.th_y_R - k.th_y_L)
