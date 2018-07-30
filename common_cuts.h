@@ -99,3 +99,37 @@ bool Analysis::EvaluateCuts(const HitData & h, const Kinematics &k, CutData &cd)
     return select;
 }
 
+
+//----------------------------------------------------------------------------------------------------
+
+CutData EvaluateCutsRDF(const HitData & h, const Kinematics &k) const
+{
+    CutData cd;
+    extern Analysis anal;
+
+    cd.cqa[1] = k.th_x_R;    cd.cqb[1] = k.th_x_L;
+    cd.cqa[2] = k.th_y_R;    cd.cqb[2] = k.th_y_L;
+    cd.cqa[3] = k.th_x_R;    cd.cqb[3] = k.vtx_x_R;
+    cd.cqa[4] = k.th_x_L;    cd.cqb[4] = k.vtx_x_L;
+    cd.cqa[5] = h.R_2_N.y;    cd.cqb[5] = h.R_2_F.y - h.R_2_N.y;
+    cd.cqa[6] = h.L_2_N.y;    cd.cqb[6] = h.L_2_F.y - h.L_2_N.y;
+    cd.cqa[7] = k.th_x;        cd.cqb[7] = k.vtx_x_R - k.vtx_x_L;
+    cd.cqa[8] = k.th_y;        cd.cqb[8] = k.vtx_y_R - k.vtx_y_L;
+
+    for (unsigned int ci = 1; ci <= anal.N_cuts; ++ci)
+    {
+        cd.cv[ci] = anal.cca[ci]*cd.cqa[ci] + anal.ccb[ci]*cd.cqb[ci] + anal.ccc[ci];
+        cd.ct[ci] = (fabs(cd.cv[ci]) <= anal.n_si * anal.csi[ci]);
+        //printf("cut %u: |%+E| < %E * %E <==> %i\n", ci, cd.cv[ci], n_si, csi[ci], cd.ct[ci]);
+    }
+
+    // and between all cuts
+    bool select = true;
+    for (unsigned int ci = 0; ci < anal.cuts.size(); ci++)
+    {
+        select &= cd.ct[anal.cuts[ci]];
+    }
+
+    cd.select = select;
+    return cd;
+}

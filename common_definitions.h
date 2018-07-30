@@ -658,6 +658,9 @@ struct CutData
     double cqb[9];    ///< array of quantities qb
     double cv[9];    ///< array of cut quantities v = a*qa + b*qb + c
     bool ct[9];        ///< array of flags whether |v| < n_si * si
+    bool select;
+
+    CutData() :  select(true) {}
 };
 
 //----------------------------------------------------------------------------------------------------

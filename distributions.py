@@ -58,9 +58,11 @@ print("* event_group_index = %s" % event_group_index)
 print("* evIdxStep = %s" % evIdxStep)
 print("* maxTaggedEvents = %s" % maxTaggedEvents)
 
-# Line 237
-
+# Line 112
+# init diagonal settings
 ROOT.Init("45b_56t");
+
+# Line 237
 ROOT.anal.BuildCuts()
 ROOT.anal.n_si = input_n_si
 
@@ -280,7 +282,7 @@ h_y_R_2_F_vs_x_R_2_F_al_nosel = r2.Histo2D(al_nosel_models[5], "h_al_x_R_2_F", "
 #    //g_tr_num_vs_timestamp->SetPoint(g_tr_num_vs_timestamp->GetN(), ev.timestamp, ev.trigger_num);
 #}
 
-# run reconstruction (Line 868)
+# run reconstruction (Line 876)
 ### kinematics struct
 ks = r2.Define("kinematics", 'DoReconstruction( h_al )')
 
@@ -310,6 +312,11 @@ ks_ext= ks.Define("k_th_x_R",        "kinematics.th_x_R") \
           .Define("k_vtx_x_diffLR",  "kinematics.vtx_x_R - kinematics.vtx_x_L") \
           .Define("k_vtx_y_diffLR",  "kinematics.vtx_y_R - kinematics.vtx_y_L") \
           .Define("k_t",             "kinematics.t")
+
+# cut evaluation
+
+cd_df = ks_ext.Define("cutdata", "EvaluateCutsRDF( h_al, kinematics )") \
+              .Filter("! cutdata.select", "elastic cut")   # Elastic cut (L979)
 
 ## TODO fill no-cut histograms (L957)
 # for (unsigned int ci = 1; ci <= anal.N_cuts; ++ci)
@@ -535,7 +542,7 @@ h_vtx_y_diffLR_vs_vtx_y_R = ks_ext.Histo1D("k_vtx_y_R", "k_vtx_y_diffLR");
 
 # Line 1401
 # calculate acceptance divergence correction
-corr_df = ks_ext.Define("correction", "CalculateAcceptanceCorrectionsRDF( kinematics )")
+corr_df = cd_df.Define("correction", "CalculateAcceptanceCorrectionsRDF( kinematics )")
 
 corr_df2 = corr_df.Define("corr", "correction.corr") \
                   .Filter("correction.skip != true", "acceptance correction")
