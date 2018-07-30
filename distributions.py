@@ -8,6 +8,8 @@ RDF = ROOT.ROOT.RDataFrame
 ROOT.gInterpreter.Declare('#include "common_definitions.h"')
 ROOT.gInterpreter.Declare('#include "parameters_global.h"')
 ROOT.gInterpreter.Declare('#include "common_algorithms.h"')
+ROOT.gInterpreter.Declare('#include "parameters.h"')
+ROOT.gInterpreter.Declare('#include "common.h"')
 
 if len(sys.argv) < 2:
     print('Usage: python distributions.py input_filename')
@@ -58,6 +60,7 @@ print("* maxTaggedEvents = %s" % maxTaggedEvents)
 
 # Line 237
 
+ROOT.Init("45b_56t");
 ROOT.anal.BuildCuts()
 ROOT.anal.n_si = input_n_si
 
@@ -137,6 +140,20 @@ if ROOT.anal.use_3outof4_efficiency_fits:
 # Long TODO
 # Lines 397 - 779
 # THistograms, TGraphs and TProfiles declaration
+
+# Create bh_t_* hists
+# FIXME Define proper binnings
+
+bh_t_Nev_before = dict()
+bh_t_Nev_after_no_corr = dict()
+bh_t_before = dict()
+bh_t_after = dict()
+bh_t_after_no_corr = dict()
+bp_t_phi_corr = dict()
+bp_t_full_corr = dict()
+
+for bi in binnings:
+    pass
 
 #Line 780
 # zero counters
@@ -218,14 +235,10 @@ h_timestamp_dgn = f1.Histo1D("timestamp")
 # Create named filter with number of zero bias events
 f2 = f1.Filter("(trigger_bits & 512) != 0", 'zero_bias_event')
 
-# Apply fine alignment (L 852)
-
-
-# run reconstruction (Line 868)
 xs = ["x_L_1_F", "x_L_2_N", "x_L_2_F", "x_R_1_F", "x_R_2_N", "x_R_2_F"]
 ys = ["y_L_1_F", "y_L_2_N", "y_L_2_F", "y_R_1_F", "y_R_2_N", "y_R_2_F"]
 
-## apply fine alignment
+# Apply fine alignment (L 852)
 r2 = f1.Define("h_al", "ApplyFineAlignment( timestamp ,{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})".format(*(xs+ys) )) \
        .Define("h_al_x_L_1_F", "h_al.L_1_F.x") \
        .Define("h_al_x_L_2_N", "h_al.L_2_N.x") \
@@ -267,8 +280,7 @@ h_y_R_2_F_vs_x_R_2_F_al_nosel = r2.Histo2D(al_nosel_models[5], "h_al_x_R_2_F", "
 #    //g_tr_num_vs_timestamp->SetPoint(g_tr_num_vs_timestamp->GetN(), ev.timestamp, ev.trigger_num);
 #}
 
-
-## Line 877
+# run reconstruction (Line 868)
 ### kinematics struct
 ks = r2.Define("kinematics", 'DoReconstruction( h_al )')
 
@@ -297,6 +309,7 @@ ks_ext= ks.Define("k_th_x_R",        "kinematics.th_x_R") \
           .Define("k_th_y_R_diffNF", "kinematics.th_y_R_F - kinematics.th_y_R_N") \
           .Define("k_vtx_x_diffLR",  "kinematics.vtx_x_R - kinematics.vtx_x_L") \
           .Define("k_vtx_y_diffLR",  "kinematics.vtx_y_R - kinematics.vtx_y_L") \
+          .Define("k_t",             "kinematics.t")
 
 ## TODO fill no-cut histograms (L957)
 # for (unsigned int ci = 1; ci <= anal.N_cuts; ++ci)
@@ -520,7 +533,23 @@ h_vtx_y_diffLR_vs_vtx_y_R = ks_ext.Histo1D("k_vtx_y_R", "k_vtx_y_diffLR");
 
 # TODO: from line 1358 to 1452 (end of event loop)
 
+# Line 1401
+# calculate acceptance divergence correction
+corr_df = ks_ext.Define("correction", "CalculateAcceptanceCorrectionsRDF( kinematics )")
+
+corr_df2 = corr_df.Define("corr", "correction.corr") \
+                  .Filter("correction.skip != true", "acceptance correction")
+
+modelreal = ROOT.TH1D("h_t_after", ";|t|",128, 0., 0.)
+modelreal.Sumw2()
+model = ROOT.RDF.TH1DModel(modelreal)
+bh_t_after_ob_1_30_02 = corr_df2.Histo1D(model, "k_t", "corr");
+
 # TODO: From line 1454 on, mostly pure root
+
+# Line 1492
+# Normalize histograms
+bh_t_after_ob_1_30_02.Scale(1., "width");
 
 # TODO Line 1497
 # h_th_y_vs_th_x_normalized.Scale(1., "width")
@@ -798,6 +827,8 @@ ROOT.gDirectory = outF.mkdir("optics");
 #
 
 accDir = outF.mkdir("acceptance correction");
+ROOT.gDirectory = accDir.mkdir("ob_1_30_02");
+bh_t_after_ob_1_30_02.Write()
 # for (unsigned int bi = 0; bi < binnings.size(); bi++)
 # {
 # 	ROOT.gDirectory = accDir->mkdir(binnings[bi].c_str());

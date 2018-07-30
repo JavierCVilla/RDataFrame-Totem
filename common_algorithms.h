@@ -407,6 +407,118 @@ Kinematics DoReconstruction(HitData &h)
     k.t = k.t_x + k.t_y;
 
     return k;
+};
+
+Correction CalculateAcceptanceCorrectionsRDF(Kinematics &k)
+{
+    extern double th_y_sign;
+    extern Analysis anal;
+
+    double phi_corr = 0., div_corr = 0.;
+
+    Correction correction;
+
+    // ---------- smearing component ----------
+
+	if ((th_y_sign * k.th_y_L < anal.th_y_lcut_L) || (th_y_sign * k.th_y_R < anal.th_y_lcut_R)
+		|| (th_y_sign * k.th_y_L > anal.th_y_hcut_L) || (th_y_sign * k.th_y_R > anal.th_y_hcut_R))
+		return correction;
+
+	double F_x = 1.;
+
+	double th_y_abs = th_y_sign * k.th_y;
+
+	double UB_y = min(anal.th_y_hcut_R - th_y_abs, th_y_abs - anal.th_y_lcut_L);
+	double LB_y = max(anal.th_y_lcut_R - th_y_abs, th_y_abs - anal.th_y_hcut_L);
+	double F_y = (UB_y > LB_y) ? ( TMath::Erf(UB_y / anal.si_th_y_1arm) - TMath::Erf(LB_y / anal.si_th_y_1arm) ) / 2. : 0.;
+
+	div_corr = 1./(F_x * F_y);
+
+	// ---------- phi component ----------
+
+	// apply safety margins to avoid excessive smearing component
+	double th_x_lcut = anal.th_x_lcut;
+	double th_x_hcut = anal.th_x_hcut;
+
+	double th_y_lcut = anal.th_y_lcut;
+	double th_y_hcut = anal.th_y_hcut;
+
+	if (k.th_x <= th_x_lcut || k.th_x >= th_x_hcut || th_y_abs <= th_y_lcut || th_y_abs >= th_y_hcut){
+        correction.div_corr = div_corr;
+		return correction;
+    }
+
+	// get all intersections
+	set<double> phis;
+
+	if (k.th > th_y_lcut)
+	{
+		double phi = asin(th_y_lcut / k.th);
+		double ta_x = k.th * cos(phi);
+		if (th_x_lcut < ta_x && ta_x < th_x_hcut)
+			phis.insert(phi);
+		if (th_x_lcut < -ta_x && -ta_x < th_x_hcut)
+			phis.insert(M_PI - phi);
+	}
+
+	if (k.th > th_y_hcut)
+	{
+		double phi = asin(th_y_hcut / k.th);
+		double ta_x = k.th * cos(phi);
+		if (th_x_lcut < ta_x && ta_x < th_x_hcut)
+			phis.insert(phi);
+		if (th_x_lcut < -ta_x && -ta_x < th_x_hcut)
+			phis.insert(M_PI - phi);
+	}
+
+	if (k.th > fabs(th_x_hcut))
+	{
+		double phi = acos(fabs(th_x_hcut) / k.th);
+		double ta_y = k.th * sin(phi);
+		if (th_y_lcut < ta_y && ta_y < th_y_hcut)
+			phis.insert(phi);
+	}
+
+	if (k.th > fabs(th_x_lcut))
+	{
+		double phi = acos(fabs(th_x_lcut) / k.th);
+		double ta_y = k.th * sin(phi);
+		if (th_y_lcut < ta_y && ta_y < th_y_hcut)
+			phis.insert(M_PI - phi);
+	}
+
+	// the number of intersections must be even
+	// if ((phis.size() % 2) == 1)
+	// {
+	// 	printf("ERROR: odd number of intersections in acceptance calculation\n");
+	// }
+
+	// no intersection => no acceptances
+	if (phis.size() == 0){
+        correction.phi_corr = phi_corr;
+        correction.div_corr = div_corr;
+        correction.corr = phi_corr * div_corr;
+		return correction;
+    }
+
+	// calculate arc-length in within acceptance
+	double phiSum = 0.;
+	for (set<double>::iterator it = phis.begin(); it != phis.end(); ++it)
+	{
+		double phi_start = *it;
+		++it;
+		double phi_end = *it;
+
+		phiSum += phi_end - phi_start;
+	}
+
+	phi_corr = 2. * M_PI / phiSum;
+
+    correction.phi_corr = phi_corr;
+    correction.div_corr = div_corr;
+    correction.corr = phi_corr * div_corr;
+    correction.skip = false;
+    return correction;
 }
 
 #endif
