@@ -213,7 +213,7 @@ N_el_raw=0;
 # if (SkipRun(run, file, true))
 # 	continue;
 
-# USED ANYWHERE?
+# NOT IMPLEMENTED: Not revelevant for plots
 # update timestamp run boundaries
 # auto rtbit = runTimestampBoundaries.find(run);
 # if (rtbit == runTimestampBoundaries.end())
@@ -229,7 +229,7 @@ N_el_raw=0;
 # if (anal.SkipTime(ev.timestamp))
 # 	continue;
 skipTime_code = """
-bool SkipTime( unsigned long long &timestamp){
+bool SkipTime( unsigned int &timestamp){
     extern Analysis anal ;
     return anal.SkipTime(timestamp);
 }
@@ -239,7 +239,7 @@ ROOT.gInterpreter.Declare(skipTime_code)
 f1 = rdf.Filter("! SkipTime( timestamp )", 'check time - selected')
 
 skipTime_interval_code = """
-bool SkipTimeInterval( unsigned long long &timestamp, int &tgd, int &tgr ){
+bool SkipTimeInterval( unsigned int &timestamp, int &tgd, int &tgr ){
     double time_group_interval = 1.;	// s
     int time_group = int(timestamp / time_group_interval);
     return  ( (time_group % tgd) != tgr);
@@ -396,7 +396,7 @@ f4 = r5.Filter("cutdata.select", "elastic cut")
 
 # Line 1039
 getNorm_corr_code = """
-double getNorm_corr( unsigned long long &timestamp ){
+double getNorm_corr( unsigned int &timestamp ){
     extern Analysis anal;
 
     // determine normalization factors (luminosity + corrections)
