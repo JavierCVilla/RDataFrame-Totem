@@ -261,7 +261,8 @@ f2 = f1.Filter("v_L_2_F && v_L_2_N && v_R_2_F && v_R_2_N", 'allDiagonalRPs')
 # 	N_4outof4_T2trig++;
 
 # Line 838
-h_timestamp_dgn = f2.Histo1D("timestamp")
+model = ("h_timestamp_dgn", ";timestamp;rate   (Hz)", int(ROOT.timestamp_bins), ROOT.timestamp_min-0.5, ROOT.timestamp_max+0.5)
+h_timestamp_dgn = f2.Histo1D(model, "timestamp")
 
 # Line 841
 # NOT IMPLEMENTED
@@ -440,7 +441,8 @@ r6 = r5.Define("norm_corr",     "getNorm_corr( timestamp )" ) \
 
 # Line 1089
 # Fill raw histograms
-h_timestamp_sel = f4.Histo1D("timestamp");
+model = ("h_timestamp_sel", ";timestamp;rate   (Hz)", int(ROOT.timestamp_bins), ROOT.timestamp_min-0.5, ROOT.timestamp_max+0.5)
+h_timestamp_sel = f4.Histo1D(model, "timestamp");
 
 
 # Line 1110
