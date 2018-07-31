@@ -273,15 +273,18 @@ h_timestamp_dgn = f2.Histo1D(model, "timestamp")
 # since all of them define keepAllBunches = True within
 # parameters.h
 
+# Line 845
 # zero bias event?
 # Create named filter with number of zero bias events
-f3 = f2.Filter("! ((trigger_bits & 512) != 0)", 'zero_bias_event')
+
+# Not cut for this filter in original code
+f_zerobias = f2.Filter("! ((trigger_bits & 512) != 0)", 'zero_bias_event')
 
 xs = ["x_L_1_F", "x_L_2_N", "x_L_2_F", "x_R_1_F", "x_R_2_N", "x_R_2_F"]
 ys = ["y_L_1_F", "y_L_2_N", "y_L_2_F", "y_R_1_F", "y_R_2_N", "y_R_2_F"]
 
 # Apply fine alignment (L 852)
-r2 = f3.Define("h_al", "ApplyFineAlignment( timestamp ,{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})".format(*(xs+ys) )) \
+r2 = f2.Define("h_al", "ApplyFineAlignment( timestamp ,{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})".format(*(xs+ys) )) \
        .Define("h_al_x_L_1_F", "h_al.L_1_F.x") \
        .Define("h_al_x_L_2_N", "h_al.L_2_N.x") \
        .Define("h_al_x_L_2_F", "h_al.L_2_F.x") \
@@ -673,7 +676,7 @@ h_th_y_vs_th_x_before = r7.Histo2D(model, "k_th_x", "k_th_y");
 f5 = r7.Filter("! correction.skip", "acceptance correction")
 
 # Line 1429
-modelreal = ROOT.TH1D("h_t_after", ";|t|",128, 0., 0.)
+modelreal = ROOT.TH1D("h_t_after", ";|t|",128, 0., 4.)
 modelreal.Sumw2()
 model = ROOT.RDF.TH1DModel(modelreal)
 bh_t_after_ob_1_30_02 = f5.Histo1D(model, "k_t", "corr");
@@ -692,7 +695,7 @@ h_th_vs_phi_after = f5.Histo2D(model, "k_th_x", "k_th_y", "div_corr");
 
 # Line 1441
 # apply normalization
-modelreal = ROOT.TH1D("h_t_normalized", ";|t|",128, 0., 0.)
+modelreal = ROOT.TH1D("h_t_normalized", ";|t|",128, 0., 4.)
 bh_t_normalized_ob_1_30_02 = f5.Define("corr_norm", "corr * normalization") \
                                .Histo1D("k_t", "corr_norm")
 
