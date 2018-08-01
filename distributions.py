@@ -174,6 +174,24 @@ bp_t_full_corr = dict()
 for bi in binnings:
     pass
 
+binning_setup = {
+    "ub" : {
+        "Nbins" : 2000,
+        "xmin"  : 0,
+        "xmax"  : 4
+    },
+    "ob-1-10-0.2" : {
+        "Nbins" : 102,
+        "xmin"  : 0,
+        "xmax"  : 4
+    },
+    "ob-1-30-0.2" : {
+        "Nbins" : 107,
+        "xmin"  : 0,
+        "xmax"  : 4
+    }
+}
+
 #Line 780
 # zero counters
 n_ev_full = 0;
@@ -651,35 +669,65 @@ h_vtx_y_diffLR_vs_vtx_y_R = f4.Histo1D("k_vtx_y_R", "k_vtx_y_diffLR");
 
 # TODO: from line 1358 to 1404 (end of event loop)
 
+one_code = """
+double One(){
+    return 1.;
+}
+"""
+ROOT.gInterpreter.Declare(one_code)
+
+
 # Line 1401
 # calculate acceptance divergence correction
 r7 = f4.Define("correction", "CalculateAcceptanceCorrectionsRDF( th_y_sign, kinematics, anal )") \
        .Define("corr",       "correction.corr") \
-       .Define("div_corr",   "correction.div_corr")
+       .Define("div_corr",   "correction.div_corr") \
+       .Define("one",        "One()")
 
-# TODO Line 1406
-# for (unsigned int bi = 0; bi < binnings.size(); bi++)
-# {
-# 	bh_t_Nev_before[bi]->Fill(k.t, 1.);
-# 	bh_t_before[bi]->Fill(k.t, 1.);
-# }
+# Line 1406
+for bi in binnings:
+    bis = binning_setup[bi]
+    Nbins = bis['Nbins']
+    xmin  = bis['xmin']
+    xmax  = bis['xmax']
+
+    modelreal = ROOT.TH1D("h_t_Nev_before", ";|t|;events per bin", Nbins, xmin, xmax)
+    model = ROOT.RDF.TH1DModel(modelreal)
+	bh_t_Nev_before[bi] = r7.Histo1D(model, "k_t", "one");
+
+    modelreal = ROOT.TH1D("h_t_before", ";|t|", Nbins, xmin, xmax)
+    model = ROOT.RDF.TH1DModel(modelreal)
+	bh_t_before[bi] = r7.Histo1D(model, "k_t", "one");
+
 
 # Line 1412
 modelreal = ROOT.TH2D("h_th_y_vs_th_x_before", ";#theta_{x};#theta_{y}", 150, -300E-6, +300E-6, 150, -150E-6, +150E-6)
 modelreal.Sumw2()
 model = ROOT.RDF.TH2DModel(modelreal)
-# FIXME: Weight value is missing (1.)
-h_th_y_vs_th_x_before = r7.Histo2D(model, "k_th_x", "k_th_y");
+h_th_y_vs_th_x_before = r7.Histo2D(model, "k_th_x", "k_th_y", "one");
 
 # Line 1414
 # Filter skip
 f5 = r7.Filter("! correction.skip", "acceptance correction")
 
 # Line 1429
-modelreal = ROOT.TH1D("h_t_after", ";|t|",128, 0., 4.)
-modelreal.Sumw2()
-model = ROOT.RDF.TH1DModel(modelreal)
-bh_t_after_ob_1_30_02 = f5.Histo1D(model, "k_t", "corr");
+for bi in binnings:
+    bis = binning_setup[bi]
+    Nbins = bis['Nbins']
+    xmin  = bis['xmin']
+    xmax  = bis['xmax']
+
+    modelreal = ROOT.TH1D("h_t_Nev_after_no_corr", ";|t|;events per bin", Nbins, xmin, xmax)
+    model = ROOT.RDF.TH1DModel(modelreal)
+    bh_t_Nev_after_no_corr[bi] = f5.Histo1D(model, "k_t", "one");
+
+    modelreal = ROOT.TH1D("h_t_after_no_corr", ";|t|", Nbins, xmin, xmax)
+    model = ROOT.RDF.TH1DModel(modelreal)
+    bh_t_after_no_corr[bi] = f5.Histo1D(model, "k_t", "one");
+
+    modelreal = ROOT.TH1D("h_t_after", ";|t|", Nbins, xmin, xmax)
+    model = ROOT.RDF.TH1DModel(modelreal)
+    bh_t_after[bi] = f5.Histo1D(model, "k_t", "corr");
 
 # Line 1435
 modelreal = ROOT.TH2D("h_th_y_vs_th_x_after", ";#theta_{x};#theta_{y}", 150, -300E-6, +300E-6, 150, -150E-6, +150E-6);
@@ -706,6 +754,14 @@ model = ROOT.RDF.TH2DModel(modelreal)
 h_th_y_vs_th_x_normalized = f5.Define("div_corr_norm", "correction.div_corr * normalization") \
                               .Histo2D(model, "k_th_x", "k_th_y", "div_corr_norm");
 
+
+# normalize histograms
+for bi in binnings:
+	bh_t_before[bi].Scale(1., "width");
+	bh_t_after_no_corr[bi].Scale(1., "width");
+	bh_t_after[bi].Scale(1., "width");
+
+	#bh_t_normalized[bi]->Scale(1., "width");
 
 ###############################
 ###### END OF EVENT LOOP ######
@@ -734,13 +790,13 @@ print("N_4outof4_T2trig = %s\n" % N_4outof4_T2trig);
 
 # Line 1492
 # Normalize histograms
-bh_t_after_ob_1_30_02.Scale(1., "width");
+#bh_t_after_ob_1_30_02.Scale(1., "width");
 
 # Line 1494
-bh_t_normalized_ob_1_30_02.Scale(1., "width")
+#bh_t_normalized_ob_1_30_02.Scale(1., "width")
 
 # TODO Line 1497
-h_th_y_vs_th_x_normalized.Scale(1., "width")
+#h_th_y_vs_th_x_normalized.Scale(1., "width")
 
 # Line 1506
 th_y_diffLR.Scale(1., "width");
@@ -1015,25 +1071,21 @@ ROOT.gDirectory = outF.mkdir("optics");
 #
 
 accDir = outF.mkdir("acceptance correction");
-ROOT.gDirectory = accDir.mkdir("ob_1_30_02");
-bh_t_after_ob_1_30_02.Write()
-# for (unsigned int bi = 0; bi < binnings.size(); bi++)
-# {
-# 	ROOT.gDirectory = accDir->mkdir(binnings[bi].c_str());
-# 	bh_t_Nev_before[bi]->Write();
-# 	bh_t_Nev_after_no_corr[bi]->Write();
-# 	bh_t_before[bi]->Write();
-# 	bh_t_after_no_corr[bi]->Write();
-# 	bh_t_after[bi]->Write();
-# 	bp_t_phi_corr[bi]->Write();
-# 	bp_t_full_corr[bi]->Write();
-#
-# 	c = new TCanvas("t cmp");
-# 	c->SetLogy(1);
-# 	bh_t_after[bi]->Draw("");
-# 	bh_t_before[bi]->Draw("same");
-# 	c->Write();
-# }
+for bi in  binnings:
+    ROOT.gDirectory = accDir.mkdir(bi);
+    bh_t_Nev_before[bi].Sumw2();        bh_t_Nev_before[bi].Write();
+    bh_t_Nev_after_no_corr[bi].Sumw2(); bh_t_Nev_after_no_corr[bi].Write();
+    bh_t_before[bi].Sumw2();            bh_t_before[bi].Write();
+    bh_t_after_no_corr[bi].Sumw2();     bh_t_after_no_corr[bi].Write();
+    bh_t_after[bi].Sumw2();             bh_t_after[bi].Write();
+    # bp_t_phi_corr[bi]->Write();
+    # bp_t_full_corr[bi]->Write();
+
+	# c = new TCanvas("t cmp");
+	# c->SetLogy(1);
+	# bh_t_after[bi]->Draw("");
+	# bh_t_before[bi]->Draw("same");
+	# c->Write();
 
 # FIXME accDir should consider binnigs
 ROOT.gDirectory = accDir;
@@ -1050,8 +1102,8 @@ ROOT.gDirectory = accDir;
 # g_th_y_vs_th_x_acc->Write();
 #
 normDir = outF.mkdir("normalization");
-ROOT.gDirectory = normDir.mkdir("ob_1_30_02");
-bh_t_normalized_ob_1_30_02.Write()
+# ROOT.gDirectory = normDir.mkdir("ob_1_30_02");
+# bh_t_normalized_ob_1_30_02.Write()
 # for (unsigned int bi = 0; bi < binnings.size(); bi++)
 # {
 # 	ROOT.gDirectory = normDir->mkdir(binnings[bi].c_str());
