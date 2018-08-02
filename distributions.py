@@ -171,24 +171,6 @@ bh_t_after_no_corr = dict()
 bp_t_phi_corr = dict()
 bp_t_full_corr = dict()
 
-buildBinningCode = """
-struct Binning {
-    unsigned int N_bins;
-    double *bin_edges;
-};
-
-Binning BuildBinningRDF(const Analysis &anal, const string &type){
-    unsigned int N_bins;
-    double *bin_edges;
-    BuildBinning(anal, type, bin_edges, N_bins);
-    Binning b;
-    b.N_bins = N_bins;
-    b.bin_edges = bin_edges;
-    return b;
-}
-"""
-ROOT.gInterpreter.Declare(buildBinningCode)
-
 binning_setup = dict()
 for b in binnings:
     binning = ROOT.BuildBinningRDF(ROOT.anal, b)
@@ -248,24 +230,8 @@ N_el_raw=0;
 # check time - selected?
 # if (anal.SkipTime(ev.timestamp))
 # 	continue;
-skipTime_code = """
-bool SkipTime( unsigned int &timestamp){
-    extern Analysis anal ;
-    return anal.SkipTime(timestamp);
-}
-"""
-ROOT.gInterpreter.Declare(skipTime_code)
 
 f1 = rdf.Filter("! SkipTime( timestamp )", 'check time - selected')
-
-skipTime_interval_code = """
-bool SkipTimeInterval( unsigned int &timestamp, int &tgd, int &tgr ){
-    double time_group_interval = 1.;	// s
-    int time_group = int(timestamp / time_group_interval);
-    return  ( (time_group % tgd) != tgr);
-}
-"""
-ROOT.gInterpreter.Declare(skipTime_interval_code)
 
 # Line 822
 if time_group_divisor != 0:
@@ -415,37 +381,10 @@ f4 = r5.Filter("cutdata.select", "elastic cut")
 ## use_3outof4_efficiency_fits
 
 # Line 1039
-getNorm_corr_code = """
-double getNorm_corr( unsigned int &timestamp ){
-    extern Analysis anal;
-
-    // determine normalization factors (luminosity + corrections)
-	double inefficiency_3outof4 = anal.inefficiency_3outof4;
-    double inefficiency_shower_near = anal.inefficiency_shower_near;
-    double inefficiency_pile_up = anal.inefficiency_pile_up;
-    double inefficiency_trigger = anal.inefficiency_trigger;
-
-    double norm_corr =
-		1./(1. - (inefficiency_3outof4 + inefficiency_shower_near))
-		* 1./(1. - inefficiency_pile_up)
-		* 1./(1. - inefficiency_trigger);
-
-    return norm_corr;
-}
-"""
-ROOT.gInterpreter.Declare(getNorm_corr_code)
+# Moved to custom function in common_algorithms.h
 
 # Line 1048
-getNormalization_code = """
-double getNormalization( double &norm_corr ){
-    extern Analysis anal;
-
-    double normalization = anal.bckg_corr * norm_corr / anal.L_int;
-
-    return normalization;
-}
-"""
-ROOT.gInterpreter.Declare(getNormalization_code)
+# Moved to custom function in common_algorithms.h
 
 # Define normalization and norm_corr colums
 r6 = r5.Define("norm_corr",     "getNorm_corr( timestamp )" ) \
@@ -670,14 +609,6 @@ h_vtx_y_diffLR_vs_vtx_y_R = f4.Histo1D("k_vtx_y_R", "k_vtx_y_diffLR");
 
 
 # TODO: from line 1358 to 1404 (end of event loop)
-
-one_code = """
-double One(){
-    return 1.;
-}
-"""
-ROOT.gInterpreter.Declare(one_code)
-
 
 # Line 1401
 # calculate acceptance divergence correction

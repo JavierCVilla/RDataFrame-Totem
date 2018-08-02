@@ -106,6 +106,16 @@ void BuildBinning(const Analysis &anal, const string &type, double* &binEdges, u
     }
 }
 
+Binning BuildBinningRDF(const Analysis &anal, const string &type){
+    unsigned int N_bins;
+    double *bin_edges;
+    BuildBinning(anal, type, bin_edges, N_bins);
+    Binning b;
+    b.N_bins = N_bins;
+    b.bin_edges = bin_edges;
+    return b;
+}
+
 //----------------------------------------------------------------------------------------------------
 
 bool CalculateAcceptanceCorrections(double th_y_sign,
@@ -424,5 +434,52 @@ Correction CalculateAcceptanceCorrectionsRDF( double th_y_sign, const Kinematics
     correction.corr = phi_corr * div_corr;
     return correction;
 };
+
+// Wrapper around anal.Skiptime
+bool SkipTime( unsigned int &timestamp){
+    extern Analysis anal ;
+    return anal.SkipTime(timestamp);
+};
+
+// Custom function to replace original check in line distributions.cc::820
+bool SkipTimeInterval( unsigned int &timestamp, int &tgd, int &tgr ){
+    double time_group_interval = 1.;	// s
+    int time_group = int(timestamp / time_group_interval);
+    return  ( (time_group % tgd) != tgr);
+};
+
+// Custom function to replace original check in line distributions.cc::1021
+double getNorm_corr( unsigned int &timestamp ){
+    extern Analysis anal;
+
+    // determine normalization factors (luminosity + corrections)
+	  double inefficiency_3outof4 = anal.inefficiency_3outof4;
+    double inefficiency_shower_near = anal.inefficiency_shower_near;
+    double inefficiency_pile_up = anal.inefficiency_pile_up;
+    double inefficiency_trigger = anal.inefficiency_trigger;
+
+    double norm_corr =
+		1./(1. - (inefficiency_3outof4 + inefficiency_shower_near))
+		* 1./(1. - inefficiency_pile_up)
+		* 1./(1. - inefficiency_trigger);
+
+    return norm_corr;
+};
+
+// Custom function to replace original check in line distributions.cc::1048
+double getNormalization( double &norm_corr ){
+    extern Analysis anal;
+
+    double normalization = anal.bckg_corr * norm_corr / anal.L_int;
+
+    return normalization;
+};
+
+// FIXME Optimize this
+// This functions is meant to be used in a RDF::Define
+// where a column will be defined containing a 1 value for event
+double One(){
+    return 1.;
+}
 
 #endif
