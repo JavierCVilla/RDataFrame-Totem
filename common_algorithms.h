@@ -67,8 +67,8 @@ void BuildBinning(const Analysis &anal, const string &type, double* &binEdges, u
         double bs_max = atof(type.substr(p3+1).c_str());
 
         // load generators
-        TFile *f_in = TFile::Open("/afs/cern.ch/work/j/jkaspar/analyses/elastic/6500GeV,beta90,10sigma/binning/generators.root");
-        //TFile *f_in = TFile::Open((path_prefix + "../binning/generators.root").c_str());
+        //TFile *f_in = TFile::Open("/afs/cern.ch/work/j/jkaspar/analyses/elastic/6500GeV,beta90,10sigma/binning/generators.root");
+        TFile *f_in = TFile::Open("binning/generators.root");
         TGraph *g_rms_t = (TGraph *) f_in->Get("g_rms_t");
         TGraph *g_bs_fsu = (TGraph *) f_in->Get( ("g_bs_stat_unc_" + stat_unc_label).c_str() );
 

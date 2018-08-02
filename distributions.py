@@ -171,26 +171,28 @@ bh_t_after_no_corr = dict()
 bp_t_phi_corr = dict()
 bp_t_full_corr = dict()
 
-for bi in binnings:
-    pass
+buildBinningCode = """
+struct Binning {
+    unsigned int N_bins;
+    double *bin_edges;
+};
 
-binning_setup = {
-    "ub" : {
-        "Nbins" : 2000,
-        "xmin"  : 0,
-        "xmax"  : 4
-    },
-    "ob-1-10-0.2" : {
-        "Nbins" : 102,
-        "xmin"  : 0,
-        "xmax"  : 4
-    },
-    "ob-1-30-0.2" : {
-        "Nbins" : 107,
-        "xmin"  : 0,
-        "xmax"  : 4
-    }
+Binning BuildBinningRDF(const Analysis &anal, const string &type){
+    unsigned int N_bins;
+    double *bin_edges;
+    BuildBinning(anal, type, bin_edges, N_bins);
+    Binning b;
+    b.N_bins = N_bins;
+    b.bin_edges = bin_edges;
+    return b;
 }
+"""
+ROOT.gInterpreter.Declare(buildBinningCode)
+
+binning_setup = dict()
+for b in binnings:
+    binning = ROOT.BuildBinningRDF(ROOT.anal, b)
+    binning_setup[b] = binning
 
 #Line 780
 # zero counters
@@ -687,15 +689,12 @@ r7 = f4.Define("correction", "CalculateAcceptanceCorrectionsRDF( th_y_sign, kine
 # Line 1406
 for bi in binnings:
     bis = binning_setup[bi]
-    Nbins = bis['Nbins']
-    xmin  = bis['xmin']
-    xmax  = bis['xmax']
 
-    modelreal = ROOT.TH1D("h_t_Nev_before", ";|t|;events per bin", Nbins, xmin, xmax)
+    modelreal = ROOT.TH1D("h_t_Nev_before", ";|t|;events per bin", bis.N_bins, bis.bin_edges)
     model = ROOT.RDF.TH1DModel(modelreal)
 	bh_t_Nev_before[bi] = r7.Histo1D(model, "k_t", "one");
 
-    modelreal = ROOT.TH1D("h_t_before", ";|t|", Nbins, xmin, xmax)
+    modelreal = ROOT.TH1D("h_t_before", ";|t|", bis.N_bins, bis.bin_edges)
     model = ROOT.RDF.TH1DModel(modelreal)
 	bh_t_before[bi] = r7.Histo1D(model, "k_t", "one");
 
@@ -713,19 +712,16 @@ f5 = r7.Filter("! correction.skip", "acceptance correction")
 # Line 1429
 for bi in binnings:
     bis = binning_setup[bi]
-    Nbins = bis['Nbins']
-    xmin  = bis['xmin']
-    xmax  = bis['xmax']
 
-    modelreal = ROOT.TH1D("h_t_Nev_after_no_corr", ";|t|;events per bin", Nbins, xmin, xmax)
+    modelreal = ROOT.TH1D("h_t_Nev_after_no_corr", ";|t|;events per bin", bis.N_bins, bis.bin_edges)
     model = ROOT.RDF.TH1DModel(modelreal)
     bh_t_Nev_after_no_corr[bi] = f5.Histo1D(model, "k_t", "one");
 
-    modelreal = ROOT.TH1D("h_t_after_no_corr", ";|t|", Nbins, xmin, xmax)
+    modelreal = ROOT.TH1D("h_t_after_no_corr", ";|t|", bis.N_bins, bis.bin_edges)
     model = ROOT.RDF.TH1DModel(modelreal)
     bh_t_after_no_corr[bi] = f5.Histo1D(model, "k_t", "one");
 
-    modelreal = ROOT.TH1D("h_t_after", ";|t|", Nbins, xmin, xmax)
+    modelreal = ROOT.TH1D("h_t_after", ";|t|", bis.N_bins, bis.bin_edges)
     model = ROOT.RDF.TH1DModel(modelreal)
     bh_t_after[bi] = f5.Histo1D(model, "k_t", "corr");
 
