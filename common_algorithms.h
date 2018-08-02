@@ -313,7 +313,7 @@ HitData ProtonTransport(const Kinematics & /*k*/, const Environment & /*env*/)
     return h;
 }
 
-HitData ApplyFineAlignment( unsigned long long &timestamp,
+HitData ApplyFineAlignment( unsigned int &timestamp,
                             double &x_L_1_F, double &x_L_2_N, double &x_L_2_F,
                             double &x_R_1_F, double &x_R_2_N, double &x_R_2_F,
                             double &y_L_1_F, double &y_L_2_N, double &y_L_2_F,
