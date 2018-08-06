@@ -48,8 +48,9 @@ git clone https://github.com/JavierCVilla/RDataFrame-Totem.git
 3. Run the code:
 
 ```
-python distill.py
-```
+python distill.py <diagonal> [threads number]
+```  
+Valid diagonals: d45b_56t, d45t_56b, ad45b_56b, ad45t_56t
 
 ### Using HelixNebula
 
@@ -57,3 +58,22 @@ python distill.py
 - Just copy `distill.ipynb` to your Cernbox space or to your SWAN instance in HelixNebula.
 - Open the python notebook and execute the cells.
 - HelixNebula already provides the needed environment configuration as well as access to the `eos` files.
+
+
+## Comparing results
+
+ROOT files produced by this code and the original analysis can be compared using the `rootcompare.c` script to ensure the same results are produced.
+
+After setting up the environment, compile the script using:
+
+```
+g++ -o rootcompare rootcompare.c `root-config --cflags --glibs`
+```
+
+This program receives 4 arguments:
+
+```
+./rootcompare fileA treenameA fileB treenameB
+```
+
+**NOTE: This script is not meant to be generic enough to compare any pair of root files, currently it's aim to compare only files produced by this analysis.**
