@@ -695,10 +695,10 @@ for bi in binnings:
     bis = binning_setup[bi]
 
     model = ROOT.RDF.TH1DModel("h_t_Nev_before", ";|t|;events per bin", bis.N_bins, bis.bin_edges)
-	bh_t_Nev_before[bi] = r7.Histo1D(model, "k_t", "one");
+    bh_t_Nev_before[bi] = r7.Histo1D(model, "k_t", "one");
 
     model = ROOT.RDF.TH1DModel("h_t_before", ";|t|", bis.N_bins, bis.bin_edges)
-	bh_t_before[bi] = r7.Histo1D(model, "k_t", "one");
+    bh_t_before[bi] = r7.Histo1D(model, "k_t", "one");
 
 
 # Line 1412

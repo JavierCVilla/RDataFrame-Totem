@@ -34,7 +34,7 @@ if len(sys.argv) < 3:
     sys.exit(1)  # no diagonal specified
 
 if len(sys.argv) == 4:
-    if int(sys.argv[2]) < 1:
+    if int(sys.argv[3]) < 1:
         print('Threads number should be > 0')
         sys.exit(1)  # wrong threads number
     ROOT.ROOT.EnableImplicitMT(int(sys.argv[3]))
