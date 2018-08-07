@@ -1,0 +1,28 @@
+Spark configuration for swan.cern.ch:
+spark.executorEnv.KRB5CCNAME
+./krbcache
+
+spark.driver.memory
+2g
+
+spark.executor.instances
+4
+
+spark.yarn.dist.files 
+{KRB5CCNAME}#krbcache,./DistROOT.py,./common_definitions.h,./common_algorithms.h,./parameters.h,./parameters_global.h,./common.h,./common_cuts.h,./common_parameters.h,./binning/generators.root
+
+spark.executor.extraLibraryPath
+{LD_LIBRARY_PATH}
+
+Configuration for HN Cloud:
+spark.driver.memory
+2g
+
+spark.executor.instances
+4
+
+spark.yarn.dist.files 
+./DistROOT.py,./common_definitions.h,./common_algorithms.h,./parameters.h,./parameters_global.h,./common.h,./common_cuts.h,./common_parameters.h,./binning/generators.root
+
+spark.executor.extraLibraryPath
+{LD_LIBRARY_PATH}
