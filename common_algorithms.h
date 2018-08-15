@@ -419,10 +419,12 @@ Kinematics DoReconstruction(HitData &h)
     return k;
 };
 
-Correction CalculateAcceptanceCorrectionsRDF( double th_y_sign, const Kinematics &k,
-                                              const Analysis &anal)
+
+Correction CalculateAcceptanceCorrectionsRDF( const Kinematics &k )
 {
     Correction correction;
+    extern Analysis anal;
+    extern double th_y_sign;
 
     double phi_corr = 0., div_corr = 0.;
 

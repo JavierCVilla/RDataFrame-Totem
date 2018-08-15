@@ -346,7 +346,7 @@ r4 = r3.Define("k_th_x_R",        "kinematics.th_x_R") \
 
 # Line 906
 # cut evaluation
-r5 = r4.Define("cutdata", "EvaluateCutsRDF( h_al, kinematics, anal )")
+r5 = r4.Define("cutdata", "EvaluateCutsRDF( h_al, kinematics )")
 
 # Line 919
 # fill background distributions
@@ -685,7 +685,7 @@ h_vtx_y_diffLR_vs_vtx_y_R = f4.Histo2D(models[1], "k_vtx_y_R", "k_vtx_y_diffLR")
 
 # Line 1401
 # calculate acceptance divergence correction
-r7 = f4.Define("correction", "CalculateAcceptanceCorrectionsRDF( th_y_sign, kinematics, anal )") \
+r7 = f4.Define("correction", "CalculateAcceptanceCorrectionsRDF( kinematics )") \
        .Define("corr",       "correction.corr") \
        .Define("div_corr",   "correction.div_corr") \
        .Define("one",        "One()")
