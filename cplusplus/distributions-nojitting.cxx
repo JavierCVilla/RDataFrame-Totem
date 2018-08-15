@@ -10,8 +10,6 @@
 
 #include <iostream>
 
-#include <TROOT.h>
-
 using RDF = ROOT::RDataFrame;
 
 // Get input (temporal options)
@@ -22,18 +20,19 @@ auto outputDir         = ".";
 
 int main(int argc, char **argv)
 {
-  gInterpreter->Declare(R"cpp(
-    #include "common_definitions.h"
-    #include "parameters_global.h"
-    #include "common_algorithms.h"
-    #include "parameters.h"
-    #include "common.h"
-  )cpp");
 
+  gInterpreter->Declare(R"cpp(
+      #include "common_definitions.h"
+      #include "parameters_global.h"
+      #include "common_algorithms.h"
+      #include "parameters.h"
+      #include "common.h"
+  )cpp");
   // Read input files
   auto fname = argv[1];
   auto input_file  = fname ; // Created with distill.py
-  gInterpreter->ProcessLine("Init(\"45b_56t\")");
+
+  Init("45b_56t");
 
   // default parameters
   unsigned int detailsLevel = 0;     // 0: no details, 1: some details, >= 2 all details
@@ -61,9 +60,8 @@ int main(int argc, char **argv)
   printf("* maxTaggedEvents = %u\n", maxTaggedEvents);
 
   // select cuts
-  auto anal = (Analysis*) gInterpreter->ProcessLine("anal;");
-  anal->BuildCuts();
-  anal->n_si = input_n_si;
+  anal.BuildCuts();
+  anal.n_si = input_n_si;
 
   // print info
   printf("\n");
@@ -71,7 +69,7 @@ int main(int argc, char **argv)
   env.Print();
   printf("\n");
   printf("------------------------------- analysis --------------------------------\n");
-  anal->Print();
+  anal.Print();
   printf("\n");
 
   // alignment init
@@ -105,13 +103,13 @@ int main(int argc, char **argv)
   for (unsigned int bi = 0; bi < binnings.size(); ++bi)
   {
     Binning b;
-    BuildBinningRDF(*anal, binnings[bi], b);
+    BuildBinningRDF(anal, binnings[bi], b);
     binning_setup[bi] = &b;
   }
   // zero counters
      unsigned long n_ev_full = 0;
      map<unsigned int, unsigned long> n_ev_cut;
-     for (unsigned int ci = 1; ci <= anal->N_cuts; ++ci)
+     for (unsigned int ci = 1; ci <= anal.N_cuts; ++ci)
          n_ev_cut[ci] = 0;
 
      double th_min = 1E100;
@@ -128,32 +126,47 @@ int main(int argc, char **argv)
   // #########################################################
 
 
-  auto f1 = rdf.Filter("! SkipTime( timestamp )", "check time - selected");
+  auto SkipTimeBis = [](unsigned int &t){
+    return ! SkipTime(t);
+  };
+
+  auto f1 = rdf.Filter( SkipTimeBis, {"timestamp"}, "check time - selected");
 
   // Diagonal cut (L831)
-  auto f2 = f1.Filter("v_L_2_F && v_L_2_N && v_R_2_F && v_R_2_N", "allDiagonalRPs");
+  auto allDiagonalRPs = [](unsigned int &v_L_2_F,unsigned int &v_L_2_N,unsigned int &v_R_2_F,unsigned int &v_R_2_N){
+    return v_L_2_F && v_L_2_N && v_R_2_F && v_R_2_N;
+  };
+
+  auto f2 = f1.Filter(allDiagonalRPs, {"v_L_2_F", "v_L_2_N", "v_R_2_F", "v_R_2_N"}, "allDiagonalRPs");
 
   //auto model = ROOT::RDF::TH1DModel("h_timestamp_dgn", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5);
   //auto h_timestamp_dgn = f2.Histo1D(model, "timestamp");
 
   // Not cut for this filter in original code
-  auto f_zerobias = f2.Filter("! ((trigger_bits & 512) != 0)", "zero_bias_event");
+  auto isZeroBiasEvent = [](unsigned int &bits){
+      return ! ((bits & 512) != 0);
+  };
 
-  auto r2 = f2.Define("h_al", "ApplyFineAlignment( timestamp , x_L_1_F, x_L_2_N, x_L_2_F, x_R_1_F, x_R_2_N, x_R_2_F, y_L_1_F, y_L_2_N, y_L_2_F, y_R_1_F, y_R_2_N, y_R_2_F)" )
-               .Define("h_al_x_L_1_F", "h_al.L_1_F.x")
-               .Define("h_al_x_L_2_N", "h_al.L_2_N.x")
-               .Define("h_al_x_L_2_F", "h_al.L_2_F.x")
-               .Define("h_al_y_L_1_F", "h_al.L_1_F.y")
-               .Define("h_al_y_L_2_N", "h_al.L_2_N.y")
-               .Define("h_al_y_L_2_F", "h_al.L_2_F.y")
-               .Define("h_al_x_R_1_F", "h_al.R_1_F.x")
-               .Define("h_al_x_R_2_N", "h_al.R_2_N.x")
-               .Define("h_al_x_R_2_F", "h_al.R_2_F.x")
-               .Define("h_al_y_R_1_F", "h_al.R_1_F.y")
-               .Define("h_al_y_R_2_N", "h_al.R_2_N.y")
-               .Define("h_al_y_R_2_F", "h_al.R_2_F.y");
+  auto f_zerobias = f2.Filter(isZeroBiasEvent, {"trigger_bits"}, "zero_bias_event");
 
-   // fill pre-selection histograms (Line 860 - 866)
+auto r2 = f2.Define("h_al", ApplyFineAlignment,  {"timestamp" , "x_L_1_F", "x_L_2_N", "x_L_2_F", "x_R_1_F", "x_R_2_N", "x_R_2_F", "y_L_1_F", "y_L_2_N", "y_L_2_F", "y_R_1_F", "y_R_2_N", "y_R_2_F"});
+//  auto r2 = f2.Define("h_al", "ApplyFineAlignment( timestamp , x_L_1_F, x_L_2_N, x_L_2_F, x_R_1_F, x_R_2_N, x_R_2_F, y_L_1_F, y_L_2_N, y_L_2_F, y_R_1_F,      y_R_2_N, y_R_2_F)");
+
+
+//#               .Define("h_al_x_L_1_F", "h_al.L_1_F.x")
+//#               .Define("h_al_x_L_2_N", "h_al.L_2_N.x")
+//#               .Define("h_al_x_L_2_F", "h_al.L_2_F.x")
+//#               .Define("h_al_y_L_1_F", "h_al.L_1_F.y")
+//#               .Define("h_al_y_L_2_N", "h_al.L_2_N.y")
+//#               .Define("h_al_y_L_2_F", "h_al.L_2_F.y")
+//#               .Define("h_al_x_R_1_F", "h_al.R_1_F.x")
+//#               .Define("h_al_x_R_2_N", "h_al.R_2_N.x")
+//#               .Define("h_al_x_R_2_F", "h_al.R_2_F.x")
+//#               .Define("h_al_y_R_1_F", "h_al.R_1_F.y")
+//#               .Define("h_al_y_R_2_N", "h_al.R_2_N.y")
+//#               .Define("h_al_y_R_2_F", "h_al.R_2_F.y");
+//#
+//   // fill pre-selection histograms (Line 860 - 866)
    // al_nosel_models = {
    //    ("h_y_L_1_F_vs_x_L_1_F_al_nosel", ";x^{L,1,F};y^{L,1,F}", 150, -15., 15., 300, -30., +30.),
    //    ("h_y_L_2_N_vs_x_L_2_N_al_nosel", ";x^{L,2,N};y^{L,2,N}", 150, -15., 15., 300, -30., +30.),
@@ -171,7 +184,7 @@ int main(int argc, char **argv)
    //auto h_y_R_2_N_vs_x_R_2_N_al_nosel = r2.Histo2D(al_nosel_models[4], "h_al_x_R_2_N", "h_al_y_R_2_N");
    //auto h_y_R_2_F_vs_x_R_2_F_al_nosel = r2.Histo2D(al_nosel_models[5], "h_al_x_R_2_F", "h_al_y_R_2_F");
 
-   auto r3 = r2.Define("kinematics", "DoReconstruction( h_al )");
+   auto r3 = r2.Define("kinematics", DoReconstruction , { "h_al" } );
 
    auto r4 = r3.Define("k_th_x_R",        "kinematics.th_x_R")
           .Define("k_th_y_R",        "kinematics.th_y_R")
@@ -202,24 +215,28 @@ int main(int argc, char **argv)
           .Define("k_th",            "kinematics.th")
           .Define("k_phi",           "kinematics.phi");
 
-    auto r5 = r4.Define("cutdata", "EvaluateCutsRDF( h_al, kinematics )");
+    auto r5 = r4.Define("cutdata", EvaluateCutsRDF, { "h_al", "kinematics"});
 
     // Elastic cut
-    auto f4 = r5.Filter("cutdata.select", "elastic cut");
+    auto f4 = r5.Filter( [](CutData &cutdata){return cutdata.select;}, {"cutdata"}, "elastic cut");
 
     // Define normalization and norm_corr colums
-    auto r6 = r5.Define("norm_corr",     "getNorm_corr( timestamp )" )
-           .Define("normalization", "getNormalization( norm_corr )");
+    auto r6 = r5.Define("norm_corr",     getNorm_corr, {"timestamp"} )
+                .Define("normalization", getNormalization, {"norm_corr"} );
 
     //auto al_nosel_models0 = ROOT::RDF::TH2DModel("h_y_L_1_F_vs_x_L_1_F_al_nosel", ";x^{L,1,F};y^{L,1,F}", 150, -15., 15., 300, -30., +30.);
     //auto h_y_L_1_F_vs_x_L_1_F_al_nosel = r2.Histo2D(al_nosel_models0, "h_al_x_L_1_F", "h_al_y_L_1_F");
 
-    auto r7 = f4.Define("correction", "CalculateAcceptanceCorrectionsRDF(kinematics)")
+    auto r7 = f4.Define("correction", CalculateAcceptanceCorrectionsRDF, { "kinematics"} )
                  .Define("corr",       "correction.corr")
                  .Define("div_corr",   "correction.div_corr")
-                 .Define("one",        "One()");
+                 .Define("one",       [](){return 1;});
 
-   auto f5 = r7.Filter("! correction.skip", "acceptance correction");
+    auto skipCorrection = [](Correction &correction){
+        return ! correction.skip;
+    };
+
+    auto f5 = r7.Filter( skipCorrection, {"correction"}, "acceptance correction");
 
    // Trigger event
    //h_y_L_1_F_vs_x_L_1_F_al_nosel.GetValue();
