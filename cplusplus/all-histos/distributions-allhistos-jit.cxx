@@ -2,11 +2,11 @@
 
 #include <TInterpreter.h>
 
-#include "common_definitions.h"
-#include "parameters_global.h"
-#include "common_algorithms.h"
-#include "parameters.h"
-#include "common.h"
+#include "../common_definitions.h"
+#include "../parameters_global.h"
+#include "../common_algorithms.h"
+#include "../parameters.h"
+#include "../common.h"
 
 #include <iostream>
 
@@ -24,11 +24,11 @@ auto outputDir         = ".";
 int main(int argc, char **argv)
 {
   gInterpreter->Declare(R"cpp(
-    #include "common_definitions.h"
-    #include "parameters_global.h"
-    #include "common_algorithms.h"
-    #include "parameters.h"
-    #include "common.h"
+    #include "../common_definitions.h"
+    #include "../parameters_global.h"
+    #include "../common_algorithms.h"
+    #include "../parameters.h"
+    #include "../common.h"
   )cpp");
 
   // Read input files

@@ -2,15 +2,17 @@
 
 #include <TInterpreter.h>
 
-#include "common_definitions.h"
-#include "parameters_global.h"
-#include "common_algorithms.h"
-#include "parameters.h"
-#include "common.h"
+#include "../common_definitions.h"
+#include "../parameters_global.h"
+#include "../common_algorithms.h"
+#include "../parameters.h"
+#include "../common.h"
 
 #include <iostream>
 
-#include <TROOT.h>
+#define GETMEMBER( type, member ) [](type &st){ return st.member; }
+#define GETEXPR( type, m1, symbol, m2 ) [](type &st){ return st.m1 symbol st.m2 ;}
+#define GETINVERSE( type, member) [](type &st){ return - st.member; }
 
 using RDF = ROOT::RDataFrame;
 using namespace std;
@@ -23,18 +25,19 @@ auto outputDir         = ".";
 
 int main(int argc, char **argv)
 {
-  gInterpreter->Declare(R"cpp(
-    #include "common_definitions.h"
-    #include "parameters_global.h"
-    #include "common_algorithms.h"
-    #include "parameters.h"
-    #include "common.h"
-  )cpp");
 
+  gInterpreter->Declare(R"cpp(
+       #include "../common_definitions.h"
+       #include "../parameters_global.h"
+       #include "../common_algorithms.h"
+       #include "../parameters.h"
+       #include "../common.h"
+  )cpp");
   // Read input files
   auto fname = argv[1];
   auto input_file  = fname ; // Created with distill.py
-  gInterpreter->ProcessLine("Init(\"45b_56t\")");
+
+  Init("45b_56t");
 
   // default parameters
   unsigned int detailsLevel = 0;     // 0: no details, 1: some details, >= 2 all details
@@ -62,9 +65,8 @@ int main(int argc, char **argv)
   printf("* maxTaggedEvents = %u\n", maxTaggedEvents);
 
   // select cuts
-  auto anal = (Analysis*) gInterpreter->ProcessLine("anal;");
-  anal->BuildCuts();
-  anal->n_si = input_n_si;
+  anal.BuildCuts();
+  anal.n_si = input_n_si;
 
   // print info
   printf("\n");
@@ -72,7 +74,7 @@ int main(int argc, char **argv)
   env.Print();
   printf("\n");
   printf("------------------------------- analysis --------------------------------\n");
-  anal->Print();
+  anal.Print();
   printf("\n");
 
   // alignment init
@@ -109,13 +111,13 @@ int main(int argc, char **argv)
   for (unsigned int bi = 0; bi < binnings.size(); ++bi)
   {
     Binning b;
-    BuildBinningRDF(*anal, binnings[bi], b);
+    BuildBinningRDF(anal, binnings[bi], b);
     binning_setup[bi] = b;
   }
   // zero counters
      unsigned long n_ev_full = 0;
      map<unsigned int, unsigned long> n_ev_cut;
-     for (unsigned int ci = 1; ci <= anal->N_cuts; ++ci)
+     for (unsigned int ci = 1; ci <= anal.N_cuts; ++ci)
          n_ev_cut[ci] = 0;
 
      double th_min = 1E100;
@@ -132,30 +134,42 @@ int main(int argc, char **argv)
   // #########################################################
 
 
-  auto f1 = rdf.Filter("! SkipTime( timestamp )", "check time - selected");
+  auto SkipTimeBis = [](unsigned int &t){
+    return ! SkipTime(t);
+  };
+
+  auto f1 = rdf.Filter( SkipTimeBis, {"timestamp"}, "check time - selected");
 
   // Diagonal cut (L831)
-  auto f2 = f1.Filter("v_L_2_F && v_L_2_N && v_R_2_F && v_R_2_N", "allDiagonalRPs");
+  auto allDiagonalRPs = [](unsigned int &v_L_2_F,unsigned int &v_L_2_N,unsigned int &v_R_2_F,unsigned int &v_R_2_N){
+    return v_L_2_F && v_L_2_N && v_R_2_F && v_R_2_N;
+  };
+
+  auto f2 = f1.Filter(allDiagonalRPs, {"v_L_2_F", "v_L_2_N", "v_R_2_F", "v_R_2_N"}, "allDiagonalRPs");
 
   auto model = ROOT::RDF::TH1DModel("h_timestamp_dgn", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5);
   auto h_timestamp_dgn = f2.Histo1D(model, "timestamp");
 
   // Not cut for this filter in original code
-  auto f_zerobias = f2.Filter("! ((trigger_bits & 512) != 0)", "zero_bias_event");
+  auto isZeroBiasEvent = [](unsigned int &bits){
+      return ! ((bits & 512) != 0);
+  };
 
-  auto r2 = f2.Define("h_al", "ApplyFineAlignment( timestamp , x_L_1_F, x_L_2_N, x_L_2_F, x_R_1_F, x_R_2_N, x_R_2_F, y_L_1_F, y_L_2_N, y_L_2_F, y_R_1_F, y_R_2_N, y_R_2_F)" )
-               .Define("h_al_x_L_1_F", "h_al.L_1_F.x")
-               .Define("h_al_x_L_2_N", "h_al.L_2_N.x")
-               .Define("h_al_x_L_2_F", "h_al.L_2_F.x")
-               .Define("h_al_y_L_1_F", "h_al.L_1_F.y")
-               .Define("h_al_y_L_2_N", "h_al.L_2_N.y")
-               .Define("h_al_y_L_2_F", "h_al.L_2_F.y")
-               .Define("h_al_x_R_1_F", "h_al.R_1_F.x")
-               .Define("h_al_x_R_2_N", "h_al.R_2_N.x")
-               .Define("h_al_x_R_2_F", "h_al.R_2_F.x")
-               .Define("h_al_y_R_1_F", "h_al.R_1_F.y")
-               .Define("h_al_y_R_2_N", "h_al.R_2_N.y")
-               .Define("h_al_y_R_2_F", "h_al.R_2_F.y");
+  auto f_zerobias = f2.Filter(isZeroBiasEvent, {"trigger_bits"}, "zero_bias_event");
+
+  auto r2 = f2.Define("h_al", ApplyFineAlignment,  {"timestamp" , "x_L_1_F", "x_L_2_N", "x_L_2_F", "x_R_1_F", "x_R_2_N", "x_R_2_F", "y_L_1_F", "y_L_2_N", "y_L_2_F", "y_R_1_F", "y_R_2_N", "y_R_2_F"})
+              .Define("h_al_x_L_1_F", GETMEMBER(HitData, L_1_F.x), {"h_al"})
+              .Define("h_al_x_L_2_N", GETMEMBER(HitData, L_2_N.x), {"h_al"})
+              .Define("h_al_x_L_2_F", GETMEMBER(HitData, L_2_F.x), {"h_al"})
+              .Define("h_al_y_L_1_F", GETMEMBER(HitData, L_1_F.y), {"h_al"})
+              .Define("h_al_y_L_2_N", GETMEMBER(HitData, L_2_N.y), {"h_al"})
+              .Define("h_al_y_L_2_F", GETMEMBER(HitData, L_2_F.y), {"h_al"})
+              .Define("h_al_x_R_1_F", GETMEMBER(HitData, R_1_F.x), {"h_al"})
+              .Define("h_al_x_R_2_N", GETMEMBER(HitData, R_2_N.x), {"h_al"})
+              .Define("h_al_x_R_2_F", GETMEMBER(HitData, R_2_F.x), {"h_al"})
+              .Define("h_al_y_R_1_F", GETMEMBER(HitData, R_1_F.y), {"h_al"})
+              .Define("h_al_y_R_2_N", GETMEMBER(HitData, R_2_N.y), {"h_al"})
+              .Define("h_al_y_R_2_F", GETMEMBER(HitData, R_2_F.y), {"h_al"});
 
    // fill pre-selection histograms (Line 860 - 866)
    map<int, ROOT::RDF::TH2DModel>al_nosel_models = {
@@ -174,45 +188,45 @@ int main(int argc, char **argv)
    auto h_y_R_2_N_vs_x_R_2_N_al_nosel = r2.Histo2D(al_nosel_models[4], "h_al_x_R_2_N", "h_al_y_R_2_N");
    auto h_y_R_2_F_vs_x_R_2_F_al_nosel = r2.Histo2D(al_nosel_models[5], "h_al_x_R_2_F", "h_al_y_R_2_F");
 
-   auto r3 = r2.Define("kinematics", "DoReconstruction( h_al )");
+   auto r3 = r2.Define("kinematics", DoReconstruction , { "h_al" } );
 
-   auto r4 = r3.Define("k_th_x_R",        "kinematics.th_x_R")
-          .Define("k_th_y_R",        "kinematics.th_y_R")
-          .Define("k_th_x_L",        "kinematics.th_x_L")
-          .Define("k_th_y_L",        "kinematics.th_y_L")
-          .Define("k_th_x",          "kinematics.th_x")
-          .Define("k_th_y",          "kinematics.th_y")
-          .Define("minus_k_th_y",    "- kinematics.th_y")
-          .Define("k_vtx_x",         "kinematics.vtx_x")
-          .Define("k_vtx_x_L",       "kinematics.vtx_x_L")
-          .Define("k_vtx_x_R",       "kinematics.vtx_x_R")
-          .Define("k_vtx_y",         "kinematics.vtx_y")
-          .Define("k_vtx_y_L",       "kinematics.vtx_y_L")
-          .Define("k_vtx_y_R",       "kinematics.vtx_y_R")
-          .Define("k_th_y_L_F",      "kinematics.th_y_L_F")
-          .Define("k_th_y_L_N",      "kinematics.th_y_L_N")
-          .Define("k_th_y_R_F",      "kinematics.th_y_R_F")
-          .Define("k_th_y_R_N",      "kinematics.th_y_R_N")
-          .Define("k_th_x_diffLR",   "kinematics.th_x_R - kinematics.th_x_L")
-          .Define("k_th_y_diffLR",   "kinematics.th_y_R - kinematics.th_y_L")
-          .Define("k_th_x_diffLF",   "kinematics.th_x_L - kinematics.th_x")
-          .Define("k_th_x_diffRF",   "kinematics.th_x_R - kinematics.th_x")
-          .Define("k_th_y_L_diffNF", "kinematics.th_y_L_F - kinematics.th_y_L_N")
-          .Define("k_th_y_R_diffNF", "kinematics.th_y_R_F - kinematics.th_y_R_N")
-          .Define("k_vtx_x_diffLR",  "kinematics.vtx_x_R - kinematics.vtx_x_L")
-          .Define("k_vtx_y_diffLR",  "kinematics.vtx_y_R - kinematics.vtx_y_L")
-          .Define("k_t",             "kinematics.t")
-          .Define("k_th",            "kinematics.th")
-          .Define("k_phi",           "kinematics.phi");
+   auto r4 = r3.Define("k_th_x_R",         GETMEMBER( Kinematics, th_x_R ), {"kinematics"})
+                .Define("k_th_y_R",        GETMEMBER( Kinematics, th_y_R), {"kinematics"})
+                .Define("k_th_x_L",        GETMEMBER( Kinematics, th_x_L), {"kinematics"})
+                .Define("k_th_y_L",        GETMEMBER( Kinematics, th_y_L), {"kinematics"})
+                .Define("k_th_x",          GETMEMBER( Kinematics, th_x), {"kinematics"})
+                .Define("k_th_y",          GETMEMBER( Kinematics, th_y), {"kinematics"})
+                .Define("minus_k_th_y",    GETINVERSE(Kinematics, th_y), {"kinematics"})
+                .Define("k_vtx_x",         GETMEMBER( Kinematics, vtx_x), {"kinematics"})
+                .Define("k_vtx_x_L",       GETMEMBER( Kinematics, vtx_x_L), {"kinematics"})
+                .Define("k_vtx_x_R",       GETMEMBER( Kinematics, vtx_x_R), {"kinematics"})
+                .Define("k_vtx_y",         GETMEMBER( Kinematics, vtx_y), {"kinematics"})
+                .Define("k_vtx_y_L",       GETMEMBER( Kinematics, vtx_y_L), {"kinematics"})
+                .Define("k_vtx_y_R",       GETMEMBER( Kinematics, vtx_y_R), {"kinematics"})
+                .Define("k_th_y_L_F",      GETMEMBER( Kinematics, th_y_L_F), {"kinematics"})
+                .Define("k_th_y_L_N",      GETMEMBER( Kinematics, th_y_L_N), {"kinematics"})
+                .Define("k_th_y_R_F",      GETMEMBER( Kinematics, th_y_R_F), {"kinematics"})
+                .Define("k_th_y_R_N",      GETMEMBER( Kinematics, th_y_R_N), {"kinematics"})
+                .Define("k_th_x_diffLR",   GETEXPR(   Kinematics, th_x_R, - , th_x_L), {"kinematics"})
+                .Define("k_th_y_diffLR",   GETEXPR(   Kinematics, th_y_R, - , th_y_L), {"kinematics"})
+                .Define("k_th_x_diffLF",   GETEXPR(   Kinematics, th_x_L, - , th_x), {"kinematics"})
+                .Define("k_th_x_diffRF",   GETEXPR(   Kinematics, th_x_R, - , th_x), {"kinematics"})
+                .Define("k_th_y_L_diffNF", GETEXPR(   Kinematics, th_y_L_F, - , th_y_L_N), {"kinematics"})
+                .Define("k_th_y_R_diffNF", GETEXPR(   Kinematics, th_y_R_F, - , th_y_R_N), {"kinematics"})
+                .Define("k_vtx_x_diffLR",  GETEXPR(   Kinematics, vtx_x_R, - , vtx_x_L), {"kinematics"})
+                .Define("k_vtx_y_diffLR",  GETEXPR(   Kinematics, vtx_y_R, - , vtx_y_L), {"kinematics"})
+                .Define("k_t",             GETMEMBER( Kinematics, t), {"kinematics"})
+                .Define("k_th",            GETMEMBER( Kinematics, th), {"kinematics"})
+                .Define("k_phi",           GETMEMBER( Kinematics, phi), {"kinematics"});
 
-    auto r5 = r4.Define("cutdata", "EvaluateCutsRDF( h_al, kinematics )");
+    auto r5 = r4.Define("cutdata", EvaluateCutsRDF, { "h_al", "kinematics"});
 
     // Elastic cut
-    auto f4 = r5.Filter("cutdata.select", "elastic cut");
+    auto f4 = r5.Filter( [](CutData &cutdata){return cutdata.select;}, {"cutdata"}, "elastic cut");
 
     // Define normalization and norm_corr colums
-    auto r6 = r5.Define("norm_corr",     "getNorm_corr( timestamp )" )
-           .Define("normalization", "getNormalization( norm_corr )");
+    auto r6 = r5.Define("norm_corr",     getNorm_corr, {"timestamp"} )
+                .Define("normalization", getNormalization, {"norm_corr"} );
 
     auto h_timestamp_sel = f4.Histo1D(ROOT::RDF::TH1DModel("h_timestamp_sel", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5), "timestamp");
 
@@ -351,7 +365,7 @@ int main(int argc, char **argv)
     auto r7 = f4.Define("correction", "CalculateAcceptanceCorrectionsRDF(kinematics)")
                  .Define("corr",       "correction.corr")
                  .Define("div_corr",   "correction.div_corr")
-                 .Define("one",        "One()");
+                 .Define("one",       [](){return 1;});
 
    Binning* bis;
    for(int bi = 0; bi < binnings.size() ; bi++){
@@ -363,9 +377,13 @@ int main(int argc, char **argv)
    // Line 1412
    auto h_th_y_vs_th_x_before = r7.Histo2D(ROOT::RDF::TH2DModel("h_th_y_vs_th_x_before", ";#theta_{x};#theta_{y}", 150, -300E-6, +300E-6, 150, -150E-6, +150E-6), "k_th_x", "k_th_y", "one");
 
-   auto f5 = r7.Filter("! correction.skip", "acceptance correction");
+   auto skipCorrection = [](Correction &correction){
+        return ! correction.skip;
+   };
 
-   for(int bi = 0; bi < binnings.size(); bi++){
+   auto f5 = r7.Filter( skipCorrection, {"correction"}, "acceptance correction");
+
+for(int bi = 0; bi < binnings.size(); bi++){
      bis = &binning_setup[bi];
      bh_t_Nev_after_no_corr[bi] = f5.Histo1D(ROOT::RDF::TH1DModel("h_t_Nev_after_no_corr", ";|t|;events per bin", bis->N_bins, bis->bin_edges), "k_t", "one");
      bh_t_after_no_corr[bi] = f5.Histo1D(ROOT::RDF::TH1DModel("h_t_after_no_corr", ";|t|", bis->N_bins, bis->bin_edges), "k_t", "one");

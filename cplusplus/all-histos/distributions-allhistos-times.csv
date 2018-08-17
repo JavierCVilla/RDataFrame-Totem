@@ -1,0 +1,6 @@
+Execution: 17-08-2018 15:10;
+Date,Test,Execution time
+17-08-2018 15:10,distributions-allhistos-jit,6:05.24
+17-08-2018 15:16,distributions-allhistos-jit-opt,5:54.63
+17-08-2018 15:22,distributions-allhistos-nojit,4:31.85
+17-08-2018 15:26,distributions-allhistos-nojit-opt,2:33.99
