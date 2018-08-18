@@ -224,6 +224,10 @@ int main(int argc, char **argv)
     // Elastic cut
     auto f4 = r5.Filter( [](CutData &cutdata){return cutdata.select;}, {"cutdata"}, "elastic cut");
 
+    // Define normalization and norm_corr colums
+    auto r6 = r5.Define("norm_corr",     getNorm_corr, {"timestamp"} )
+                .Define("normalization", getNormalization, {"norm_corr"} );
+
     auto h_timestamp_sel = f4.Histo1D(ROOT::RDF::TH1DModel("h_timestamp_sel", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5), "timestamp");
 
     // fill histograms
@@ -358,14 +362,10 @@ int main(int argc, char **argv)
     auto h_vtx_x_diffLR_vs_vtx_x_R = f4.Histo2D(ROOT::RDF::TH2DModel("h_vtx_x_diffLR_vs_vtx_x_R", ";x^{*,R};x^{*,R} - x^{*,L}", 100, -0.5, +0.5, 100, -0.5, +0.5), "k_vtx_x_R", "k_vtx_y_diffLR");
     auto h_vtx_y_diffLR_vs_vtx_y_R = f4.Histo2D(ROOT::RDF::TH2DModel("h_vtx_y_diffLR_vs_vtx_y_R", ";y^{*,R};y^{*,R} - y^{*,L}", 100, -0.5, +0.5, 100, -0.5, +0.5), "k_vtx_y_R", "k_vtx_y_diffLR");
 
-    // Define normalization and norm_corr colums
-    auto r6 = f4.Define("norm_corr",     getNorm_corr, {"timestamp"} )
-                .Define("normalization", getNormalization, {"norm_corr"} );
-
-    auto r7 = r6.Define("correction", CalculateAcceptanceCorrectionsRDF, {"kinematics"})
-                .Define("corr",       "correction.corr")
-                .Define("div_corr",   "correction.div_corr")
-                .Define("one",       [](){return 1;});
+    auto r7 = f4.Define("correction", "CalculateAcceptanceCorrectionsRDF(kinematics)")
+                 .Define("corr",       "correction.corr")
+                 .Define("div_corr",   "correction.div_corr")
+                 .Define("one",       [](){return 1;});
 
    Binning* bis;
    for(int bi = 0; bi < binnings.size() ; bi++){
@@ -398,15 +398,12 @@ for(int bi = 0; bi < binnings.size(); bi++){
 
    // Line 1441
    // apply normalization
-   auto getMult = [](double &corr, double &norm){
-       return corr * norm;
-   };
-   auto bh_t_normalized_ob_1_30_02 = f5.Define("corr_norm", getMult, {"corr", "normalization"})
+   auto bh_t_normalized_ob_1_30_02 = f5.Define("corr_norm", "corr * normalization")
                                   .Histo1D(ROOT::RDF::TH1DModel("h_t_normalized", ";|t|",128, 0., 4.), "k_t", "corr_norm");
 
    // Line 1445
-   auto h_th_y_vs_th_x_normalized = f5.Define("div_corr_norm", getMult, {"div_corr", "normalization"})
-                                      .Histo2D(ROOT::RDF::TH2DModel("h_th_y_vs_th_x_normalized", ";#theta_{x};#theta_{y}", 150, -600E-6, +600E-6, 150, -600E-6, +600E-6), "k_th_x", "k_th_y", "div_corr_norm");
+   auto h_th_y_vs_th_x_normalized = f5.Define("div_corr_norm", "correction.div_corr * normalization")
+                                 .Histo2D(ROOT::RDF::TH2DModel("h_th_y_vs_th_x_normalized", ";#theta_{x};#theta_{y}", 150, -600E-6, +600E-6, 150, -600E-6, +600E-6), "k_th_x", "k_th_y", "div_corr_norm");
 
    // Trigger event
    //h_y_L_1_F_vs_x_L_1_F_al_nosel.GetValue();
