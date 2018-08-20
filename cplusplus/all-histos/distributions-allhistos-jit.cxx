@@ -9,6 +9,7 @@
 #include "../common.h"
 
 #include <iostream>
+#include <cstdlib>
 
 #include <TROOT.h>
 
@@ -23,6 +24,10 @@ auto outputDir         = ".";
 
 int main(int argc, char **argv)
 {
+  // Enable implicit parallelism
+  if(argc > 2 && atoi(argv[2]) != 0)
+    ROOT::EnableImplicitMT(atoi(argv[2]));
+
   gInterpreter->Declare(R"cpp(
     #include "../common_definitions.h"
     #include "../parameters_global.h"

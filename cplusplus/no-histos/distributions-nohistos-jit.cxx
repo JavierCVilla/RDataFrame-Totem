@@ -9,10 +9,12 @@
 #include "../common.h"
 
 #include <iostream>
+#include <cstdlib>
 
 #include <TROOT.h>
 
 using RDF = ROOT::RDataFrame;
+using namespace std;
 
 // Get input (temporal options)
 auto treename          = "distilled";
@@ -22,6 +24,10 @@ auto outputDir         = ".";
 
 int main(int argc, char **argv)
 {
+  // Enable implicit parallelism
+  if(argc > 2 && atoi(argv[2]) != 0)
+    ROOT::EnableImplicitMT(atoi(argv[2]));
+
   gInterpreter->Declare(R"cpp(
     #include "../common_definitions.h"
     #include "../parameters_global.h"
@@ -106,7 +112,7 @@ int main(int argc, char **argv)
   {
     Binning b;
     BuildBinningRDF(*anal, binnings[bi], b);
-    binning_setup[bi] = &b;
+    binning_setup[bi] = b;
   }
   // zero counters
      unsigned long n_ev_full = 0;
@@ -132,9 +138,6 @@ int main(int argc, char **argv)
 
   // Diagonal cut (L831)
   auto f2 = f1.Filter("v_L_2_F && v_L_2_N && v_R_2_F && v_R_2_N", "allDiagonalRPs");
-
-  //auto model = ROOT::RDF::TH1DModel("h_timestamp_dgn", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5);
-  //auto h_timestamp_dgn = f2.Histo1D(model, "timestamp");
 
   // Not cut for this filter in original code
   auto f_zerobias = f2.Filter("! ((trigger_bits & 512) != 0)", "zero_bias_event");

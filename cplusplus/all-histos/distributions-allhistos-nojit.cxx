@@ -9,6 +9,7 @@
 #include "../common.h"
 
 #include <iostream>
+#include <cstdlib>
 
 #define GETMEMBER( type, member ) [](type &st){ return st.member; }
 #define GETEXPR( type, m1, symbol, m2 ) [](type &st){ return st.m1 symbol st.m2 ;}
@@ -25,6 +26,9 @@ auto outputDir         = ".";
 
 int main(int argc, char **argv)
 {
+  // Enable implicit parallelism
+  if(argc > 2 && atoi(argv[2]) != 0)
+    ROOT::EnableImplicitMT(atoi(argv[2]));
 
   gInterpreter->Declare(R"cpp(
        #include "../common_definitions.h"
@@ -225,7 +229,7 @@ int main(int argc, char **argv)
     auto f4 = r5.Filter( [](CutData &cutdata){return cutdata.select;}, {"cutdata"}, "elastic cut");
 
     // Define normalization and norm_corr colums
-    auto r6 = r5.Define("norm_corr",     getNorm_corr, {"timestamp"} )
+    auto r6 = f4.Define("norm_corr",     getNorm_corr, {"timestamp"} )
                 .Define("normalization", getNormalization, {"norm_corr"} );
 
     auto h_timestamp_sel = f4.Histo1D(ROOT::RDF::TH1DModel("h_timestamp_sel", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5), "timestamp");
@@ -362,9 +366,9 @@ int main(int argc, char **argv)
     auto h_vtx_x_diffLR_vs_vtx_x_R = f4.Histo2D(ROOT::RDF::TH2DModel("h_vtx_x_diffLR_vs_vtx_x_R", ";x^{*,R};x^{*,R} - x^{*,L}", 100, -0.5, +0.5, 100, -0.5, +0.5), "k_vtx_x_R", "k_vtx_y_diffLR");
     auto h_vtx_y_diffLR_vs_vtx_y_R = f4.Histo2D(ROOT::RDF::TH2DModel("h_vtx_y_diffLR_vs_vtx_y_R", ";y^{*,R};y^{*,R} - y^{*,L}", 100, -0.5, +0.5, 100, -0.5, +0.5), "k_vtx_y_R", "k_vtx_y_diffLR");
 
-    auto r7 = f4.Define("correction", "CalculateAcceptanceCorrectionsRDF(kinematics)")
-                 .Define("corr",       "correction.corr")
-                 .Define("div_corr",   "correction.div_corr")
+    auto r7 = r6.Define("correction", CalculateAcceptanceCorrectionsRDF, {"kinematics"})
+                 .Define("corr",      GETMEMBER(Correction, corr),  {"correction"})
+                 .Define("div_corr",  GETMEMBER(Correction, div_corr), {"correction"})
                  .Define("one",       [](){return 1;});
 
    Binning* bis;
@@ -383,7 +387,7 @@ int main(int argc, char **argv)
 
    auto f5 = r7.Filter( skipCorrection, {"correction"}, "acceptance correction");
 
-for(int bi = 0; bi < binnings.size(); bi++){
+   for(int bi = 0; bi < binnings.size(); bi++){
      bis = &binning_setup[bi];
      bh_t_Nev_after_no_corr[bi] = f5.Histo1D(ROOT::RDF::TH1DModel("h_t_Nev_after_no_corr", ";|t|;events per bin", bis->N_bins, bis->bin_edges), "k_t", "one");
      bh_t_after_no_corr[bi] = f5.Histo1D(ROOT::RDF::TH1DModel("h_t_after_no_corr", ";|t|", bis->N_bins, bis->bin_edges), "k_t", "one");
@@ -396,13 +400,17 @@ for(int bi = 0; bi < binnings.size(); bi++){
    // Line 1435
    auto h_th_vs_phi_after = f5.Histo2D(ROOT::RDF::TH2DModel("h_th_vs_phi_after", ";#phi;#theta", 50, -M_PI, +M_PI, 50, 150E-6, 550E-6), "k_phi", "k_th", "div_corr");
 
+   auto getMult = [](double &a, double &b){
+     return a * b;
+   };
+
    // Line 1441
    // apply normalization
-   auto bh_t_normalized_ob_1_30_02 = f5.Define("corr_norm", "corr * normalization")
+   auto bh_t_normalized_ob_1_30_02 = f5.Define("corr_norm", getMult, {"corr", "normalization"})
                                   .Histo1D(ROOT::RDF::TH1DModel("h_t_normalized", ";|t|",128, 0., 4.), "k_t", "corr_norm");
 
    // Line 1445
-   auto h_th_y_vs_th_x_normalized = f5.Define("div_corr_norm", "correction.div_corr * normalization")
+   auto h_th_y_vs_th_x_normalized = f5.Define("div_corr_norm", getMult, {"div_corr", "normalization"})
                                  .Histo2D(ROOT::RDF::TH2DModel("h_th_y_vs_th_x_normalized", ";#theta_{x};#theta_{y}", 150, -600E-6, +600E-6, 150, -600E-6, +600E-6), "k_th_x", "k_th_y", "div_corr_norm");
 
    // Trigger event

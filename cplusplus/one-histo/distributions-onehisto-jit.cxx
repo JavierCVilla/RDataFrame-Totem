@@ -9,10 +9,12 @@
 #include "../common.h"
 
 #include <iostream>
+#include <cstdlib>
 
 #include <TROOT.h>
 
 using RDF = ROOT::RDataFrame;
+using namespace std;
 
 // Get input (temporal options)
 auto treename          = "distilled";
@@ -22,6 +24,10 @@ auto outputDir         = ".";
 
 int main(int argc, char **argv)
 {
+  // Enable implicit parallelism
+  if(argc > 2 && atoi(argv[2]) != 0)
+    ROOT::EnableImplicitMT(atoi(argv[2]));
+
   gInterpreter->Declare(R"cpp(
     #include "../common_definitions.h"
     #include "../parameters_global.h"
@@ -100,13 +106,13 @@ int main(int argc, char **argv)
   // book metadata histograms
   unsigned int timestamp_bins = timestamp_max - timestamp_min + 1.;
 
-  map<unsigned int, Binning*> binning_setup;
+  Binning binning_setup[binnings.size()];
 
   for (unsigned int bi = 0; bi < binnings.size(); ++bi)
   {
     Binning b;
     BuildBinningRDF(*anal, binnings[bi], b);
-    binning_setup[bi] = &b;
+    binning_setup[bi] = b;
   }
   // zero counters
      unsigned long n_ev_full = 0;
@@ -132,9 +138,6 @@ int main(int argc, char **argv)
 
   // Diagonal cut (L831)
   auto f2 = f1.Filter("v_L_2_F && v_L_2_N && v_R_2_F && v_R_2_N", "allDiagonalRPs");
-
-  //auto model = ROOT::RDF::TH1DModel("h_timestamp_dgn", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5);
-  //auto h_timestamp_dgn = f2.Histo1D(model, "timestamp");
 
   // Not cut for this filter in original code
   auto f_zerobias = f2.Filter("! ((trigger_bits & 512) != 0)", "zero_bias_event");
@@ -211,8 +214,6 @@ int main(int argc, char **argv)
     auto r6 = r5.Define("norm_corr",     "getNorm_corr( timestamp )" )
            .Define("normalization", "getNormalization( norm_corr )");
 
-    //auto al_nosel_models0 = ROOT::RDF::TH2DModel("h_y_L_1_F_vs_x_L_1_F_al_nosel", ";x^{L,1,F};y^{L,1,F}", 150, -15., 15., 300, -30., +30.);
-    //auto h_y_L_1_F_vs_x_L_1_F_al_nosel = r2.Histo2D(al_nosel_models0, "h_al_x_L_1_F", "h_al_y_L_1_F");
 
     auto r7 = f4.Define("correction", "CalculateAcceptanceCorrectionsRDF(kinematics)")
                  .Define("corr",       "correction.corr")
@@ -223,6 +224,4 @@ int main(int argc, char **argv)
 
    // Trigger event
    h_y_L_1_F_vs_x_L_1_F_al_nosel.GetValue();
-   //auto c = f5.Count().GetValue();
-   //std::cout << c << std::endl;
 }

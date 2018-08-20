@@ -9,12 +9,14 @@
 #include "../common.h"
 
 #include <iostream>
+#include <cstdlib>
 
 #define GETMEMBER( type, member ) [](type &st){ return st.member; }
 #define GETEXPR( type, m1, symbol, m2 ) [](type &st){ return st.m1 symbol st.m2 ;}
 #define GETINVERSE( type, member) [](type &st){ return - st.member; }
 
 using RDF = ROOT::RDataFrame;
+using namespace std;
 
 // Get input (temporal options)
 auto treename          = "distilled";
@@ -24,8 +26,11 @@ auto outputDir         = ".";
 
 int main(int argc, char **argv)
 {
+  // Enable implicit parallelism
+  if(argc > 2 && atoi(argv[2]) != 0)
+    ROOT::EnableImplicitMT(atoi(argv[2]));
 
-   gInterpreter->Declare(R"cpp(
+  gInterpreter->Declare(R"cpp(
        #include "../common_definitions.h"
        #include "../parameters_global.h"
        #include "../common_algorithms.h"
@@ -102,13 +107,13 @@ int main(int argc, char **argv)
   // book metadata histograms
   unsigned int timestamp_bins = timestamp_max - timestamp_min + 1.;
 
-  map<unsigned int, Binning*> binning_setup;
+  Binning binning_setup[binnings.size()];
 
   for (unsigned int bi = 0; bi < binnings.size(); ++bi)
   {
     Binning b;
     BuildBinningRDF(anal, binnings[bi], b);
-    binning_setup[bi] = &b;
+    binning_setup[bi] = b;
   }
   // zero counters
      unsigned long n_ev_full = 0;
@@ -142,9 +147,6 @@ int main(int argc, char **argv)
   };
 
   auto f2 = f1.Filter(allDiagonalRPs, {"v_L_2_F", "v_L_2_N", "v_R_2_F", "v_R_2_N"}, "allDiagonalRPs");
-
-  //auto model = ROOT::RDF::TH1DModel("h_timestamp_dgn", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5);
-  //auto h_timestamp_dgn = f2.Histo1D(model, "timestamp");
 
   // Not cut for this filter in original code
   auto isZeroBiasEvent = [](unsigned int &bits){
@@ -222,15 +224,12 @@ int main(int argc, char **argv)
     auto f4 = r5.Filter( [](CutData &cutdata){return cutdata.select;}, {"cutdata"}, "elastic cut");
 
     // Define normalization and norm_corr colums
-    auto r6 = r5.Define("norm_corr",     getNorm_corr, {"timestamp"} )
+    auto r6 = f4.Define("norm_corr",     getNorm_corr, {"timestamp"} )
                 .Define("normalization", getNormalization, {"norm_corr"} );
 
-    //auto al_nosel_models0 = ROOT::RDF::TH2DModel("h_y_L_1_F_vs_x_L_1_F_al_nosel", ";x^{L,1,F};y^{L,1,F}", 150, -15., 15., 300, -30., +30.);
-    //auto h_y_L_1_F_vs_x_L_1_F_al_nosel = r2.Histo2D(al_nosel_models0, "h_al_x_L_1_F", "h_al_y_L_1_F");
-
-    auto r7 = f4.Define("correction", CalculateAcceptanceCorrectionsRDF, { "kinematics"} )
-                 .Define("corr",       "correction.corr")
-                 .Define("div_corr",   "correction.div_corr")
+    auto r7 = r6.Define("correction", CalculateAcceptanceCorrectionsRDF, {"kinematics"})
+                 .Define("corr",      GETMEMBER(Correction, corr),  {"correction"})
+                 .Define("div_corr",  GETMEMBER(Correction, div_corr), {"correction"})
                  .Define("one",       [](){return 1;});
 
     auto skipCorrection = [](Correction &correction){
@@ -241,6 +240,4 @@ int main(int argc, char **argv)
 
    // Trigger event
    h_y_L_1_F_vs_x_L_1_F_al_nosel.GetValue();
-   //auto c = f5.Count().GetValue();
-   //std::cout << c << std::endl;
 }
