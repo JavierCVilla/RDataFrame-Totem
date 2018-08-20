@@ -1,0 +1,12 @@
+Execution: 20-08-2018 19:50;
+Date,Test,Threads,Execution time
+20-08-2018 19:50,distributions-onehisto,0,0:19.63
+20-08-2018 19:50,distributions-onehisto,1,1:00.44
+20-08-2018 19:51,distributions-onehisto,2,0:36.51
+20-08-2018 19:52,distributions-onehisto,4,0:22.82
+20-08-2018 19:52,distributions-onehisto,8,0:18.83
+20-08-2018 19:52,distributions-onehisto-libs,0,0:17.27
+20-08-2018 19:53,distributions-onehisto-libs,1,0:51.47
+20-08-2018 19:54,distributions-onehisto-libs,2,0:31.69
+20-08-2018 19:54,distributions-onehisto-libs,4,0:20.54
+20-08-2018 19:55,distributions-onehisto-libs,8,0:17.33

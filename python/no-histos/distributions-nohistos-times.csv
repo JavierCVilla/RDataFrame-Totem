@@ -1,0 +1,24 @@
+Execution: 20-08-2018 19:43;
+Date,Test,Threads,Execution time
+20-08-2018 19:43,distributions-nohistos,0,0:17.65
+20-08-2018 19:43,distributions-nohistos,1,0:54.00
+20-08-2018 19:44,distributions-nohistos,2,0:31.96
+20-08-2018 19:44,distributions-nohistos,4,0:20.50
+20-08-2018 19:45,distributions-nohistos,8,0:17.94
+20-08-2018 19:45,distributions-nohistos-libs,0,0:15.36
+20-08-2018 19:45,distributions-nohistos-libs,1,0:46.44
+20-08-2018 19:46,distributions-nohistos-libs,2,0:28.19
+20-08-2018 19:46,distributions-nohistos-libs,4,0:18.57
+20-08-2018 19:47,distributions-nohistos-libs,8,0:15.79
+Execution: 20-08-2018 22:42;
+Date,Test,Threads,Execution time
+20-08-2018 22:42,distributions-nohistos,0,0:53.32
+20-08-2018 22:42,distributions-nohistos,1,0:53.72
+20-08-2018 22:43,distributions-nohistos,2,0:32.15
+20-08-2018 22:44,distributions-nohistos,4,0:20.59
+20-08-2018 22:44,distributions-nohistos,8,0:17.25
+20-08-2018 22:44,distributions-nohistos-libs,0,0:44.78
+20-08-2018 22:45,distributions-nohistos-libs,1,0:45.76
+20-08-2018 22:46,distributions-nohistos-libs,2,0:28.41
+20-08-2018 22:46,distributions-nohistos-libs,4,0:18.70
+20-08-2018 22:47,distributions-nohistos-libs,8,0:16.21
