@@ -35,18 +35,25 @@ sed -i "s#{PWD}#$PWD#" $TOTEMdataset/block1/parameters.h
 # Setup environment
 source /cvmfs/sft.cern.ch/lcg/views/dev3/latest/x86_64-centos7-gcc62-opt/setup.sh
 
-# Run distill
+# Compile distill
 date=$(date +%d-%m-%Y\ %H:%M)
-echo "Running distill.cc: ./run $diagonal distill.cc $TOTEMdataset/block1/"
+echo "Compiing distil.cc"
 ./run distill.cc $diagonal -no-bckg $TOTEMdataset/block1/
-realtime=`cat $TOTEMdataset/block1/distill_45b_56t.log_run | grep real | awk '{print $NF}' | tr "ms" ": "`
+
+logfile="distill_$diagonal_$TOTEMdataset.log"
+
+echo "Running distill.cc: ./distill $diagonal distill.cc $TOTEMdataset/block1/"
+{ time ./$TOTEMdataset/block1/.distill 45b_56t ; } &> "$logfile"
+realtime=`cat $logfile | grep real | awk '{print $NF}' | tr "ms" ": "`
+
+cd -
 
 echo "$date,distill,$nthreads,$realtime" >> $OUTPUT
 
 # Run distributions
 echo "Running distributions.cc"
 date=$(date +%d-%m-%Y\ %H:%M)
-./run distributions.cc $diagonal -no-bckg dTOTEMdataset/block1/
+./run distributions.cc $diagonal -no-bckg $TOTEMdataset/block1/
 realtime=`cat $TOTEMdataset/block1/distributions_45b_56t.log_run | grep real | awk '{print $NF}' | tr "ms" ": "`
 
 echo "$date,distill,$nthreads,$realtime" >> $OUTPUT

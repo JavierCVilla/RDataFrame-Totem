@@ -5,7 +5,7 @@ INPUTPATH=`dirname $SCRIPTPATH`
 
 OUTPUT="fullpython-times.csv"
 
-headers="Date,Test,Threads,Execution time"
+headers="Date,Dataset,Test,Threads,Execution time"
 
 echo $headers >> $OUTPUT
 
@@ -24,14 +24,14 @@ do
   realtime=$((/usr/bin/time -f'%E' python distill.py d45b_56t DS1 ${nthreads//0/" "} >> $logfile ) 2>&1 )
   # Supress warning during snapshot
   realtime=`echo -e $realtime | tail -n 1 | awk '{print $NF}'`
-  echo "$date,distill,$nthreads,$realtime" >> $OUTPUT
+  echo "$date,DS1,distill,$nthreads,$realtime" >> $OUTPUT
 
   # Distributions
   echo "Running: distributions.py"
 
   INPUTFILE="distill_DS1_${th_tag}_d45b_56t_new.root"
   realtime=$((/usr/bin/time -f'%E' python distributions.py $INPUTFILE $nthreads  > /dev/null )     2>&1 )
-  echo "$date,distributions,$nthreads,$realtime" >> $OUTPUT
+  echo "$date,DS1,distributions,$nthreads,$realtime" >> $OUTPUT
   
 done
 
