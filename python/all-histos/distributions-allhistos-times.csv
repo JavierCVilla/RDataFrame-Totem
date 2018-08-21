@@ -10,3 +10,5 @@ Date,Test,Threads,Execution time
 20-08-2018 20:22,distributions-allhistos-libs,2,3:33.36
 20-08-2018 20:26,distributions-allhistos-libs,4,2:00.11
 20-08-2018 20:28,distributions-allhistos-libs,8,1:36.63
+Execution: 21-08-2018 00:14;
+Date,Test,Threads,Execution time
