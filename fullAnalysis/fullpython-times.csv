@@ -1,0 +1,13 @@
+Date,Test,Threads,Execution time
+21-08-2018 10:37,distill,0,4:23.18
+21-08-2018 10:37,distributions,0,6:34.84
+21-08-2018 10:48,distill,1,6:54.24
+21-08-2018 10:48,distributions,1,6:19.54
+21-08-2018 11:02,distill,2,2:59.25
+21-08-2018 11:02,distributions,2,3:15.94
+21-08-2018 11:08,distill,4,1:27.36
+21-08-2018 11:08,distributions,4,2:02.76
+21-08-2018 11:11,distill,8,1:04.91
+21-08-2018 11:11,distributions,8,1:27.13
+21-08-2018 11:14,distill,16,1:17.56
+21-08-2018 11:14,distributions,16,1:32.50
