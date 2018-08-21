@@ -14,9 +14,15 @@ ROOT.gInterpreter.Declare('#include "common.h"')
 # FIXME: Do not manage to get it from ROOT
 M_PI = 3.14159265358979323846264338328      # Pi
 
+th_tag="no_MT"
 if len(sys.argv) < 2:
     print('Usage: python distributions.py input_filename')
     sys.exit(1)  # no input file specified
+if len(sys.argv) == 3:
+    nthreads = int(sys.argv[2])
+    if nthreads != 0:
+        th_tag="threads_"+sys.argv[2]
+        ROOT.ROOT.EnableImplicitMT(nthreads)
 
 # Read input files
 fname = sys.argv[1]
@@ -807,7 +813,8 @@ th_x_diffLR.Scale(1., "width");
 # save histograms
 c = ROOT.TCanvas();
 
-outF = ROOT.TFile.Open(outputDir+"/distributions_" + selected_diagonal + ".root", "recreate");
+outputname = "/distributions_{}_{}_{}.root".format("DS1", th_tag, selected_diagonal)
+outF = ROOT.TFile.Open(outputDir+outputname, "recreate");
 ROOT.gDirectory = outF.mkdir("metadata");
 
 c = ROOT.TCanvas("rate cmp");
