@@ -1,0 +1,56 @@
+Execution: 17-08-2018 15:10;
+Date,Test,Execution time
+17-08-2018 15:10,distributions-allhistos-jit,6:05.24
+17-08-2018 15:16,distributions-allhistos-jit-opt,5:54.63
+17-08-2018 15:22,distributions-allhistos-nojit,4:31.85
+17-08-2018 15:26,distributions-allhistos-nojit-opt,2:33.99
+Execution: 18-08-2018 16:22;
+Date,Test,Execution time
+18-08-2018 16:22,distributions-allhistos-jit,6:12.31
+18-08-2018 16:28,distributions-allhistos-jit-opt,6:08.34
+18-08-2018 16:34,distributions-allhistos-nojit,5:50.17
+18-08-2018 16:40,distributions-allhistos-nojit-opt,3:09.30
+Execution: 18-08-2018 17:04;
+Date,Test,Threads,Execution time
+18-08-2018 17:04,distributions-allhistos-jit,0,6:19.79
+18-08-2018 17:10,distributions-allhistos-jit,1,6:10.50
+18-08-2018 17:16,distributions-allhistos-jit,2,6:12.86
+18-08-2018 17:22,distributions-allhistos-jit,4,6:20.46
+18-08-2018 17:29,distributions-allhistos-jit,8,6:18.88
+18-08-2018 17:35,distributions-allhistos-jit-opt,0,6:02.54
+18-08-2018 17:41,distributions-allhistos-jit-opt,1,6:11.00
+18-08-2018 17:47,distributions-allhistos-jit-opt,2,6:08.10
+18-08-2018 17:53,distributions-allhistos-jit-opt,4,6:01.65
+18-08-2018 17:59,distributions-allhistos-jit-opt,8,6:08.65
+18-08-2018 18:06,distributions-allhistos-nojit,0,5:40.98
+18-08-2018 18:11,distributions-allhistos-nojit,1,5:42.50
+18-08-2018 18:17,distributions-allhistos-nojit,2,5:52.31
+18-08-2018 18:23,distributions-allhistos-nojit,4,5:50.59
+18-08-2018 18:29,distributions-allhistos-nojit,8,5:45.34
+18-08-2018 18:34,distributions-allhistos-nojit-opt,0,3:08.60
+18-08-2018 18:38,distributions-allhistos-nojit-opt,1,3:17.61
+18-08-2018 18:41,distributions-allhistos-nojit-opt,2,3:08.76
+18-08-2018 18:44,distributions-allhistos-nojit-opt,4,3:08.41
+18-08-2018 18:47,distributions-allhistos-nojit-opt,8,3:13.42
+Execution: 18-08-2018 19:01;
+Date,Test,Threads,Execution time
+18-08-2018 19:01,distributions-allhistos-jit,0,6:07.21
+18-08-2018 19:07,distributions-allhistos-jit,1,6:20.82
+18-08-2018 19:14,distributions-allhistos-jit,2,3:18.81
+18-08-2018 19:17,distributions-allhistos-jit,4,1:49.86
+18-08-2018 19:19,distributions-allhistos-jit,8,1:24.74
+18-08-2018 19:20,distributions-allhistos-jit-opt,0,6:11.31
+18-08-2018 19:26,distributions-allhistos-jit-opt,1,6:13.87
+18-08-2018 19:33,distributions-allhistos-jit-opt,2,3:16.04
+18-08-2018 19:36,distributions-allhistos-jit-opt,4,1:45.41
+18-08-2018 19:38,distributions-allhistos-jit-opt,8,1:23.05
+18-08-2018 19:39,distributions-allhistos-nojit,0,5:56.74
+18-08-2018 19:45,distributions-allhistos-nojit,1,5:48.64
+18-08-2018 19:51,distributions-allhistos-nojit,2,3:02.80
+18-08-2018 19:54,distributions-allhistos-nojit,4,1:35.29
+18-08-2018 19:55,distributions-allhistos-nojit,8,1:11.73
+18-08-2018 19:57,distributions-allhistos-nojit-opt,0,3:11.76
+18-08-2018 20:00,distributions-allhistos-nojit-opt,1,3:16.16
+18-08-2018 20:03,distributions-allhistos-nojit-opt,2,1:45.89
+18-08-2018 20:05,distributions-allhistos-nojit-opt,4,1:06.53
+18-08-2018 20:06,distributions-allhistos-nojit-opt,8,0:48.64
