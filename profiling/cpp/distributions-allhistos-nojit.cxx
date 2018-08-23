@@ -4,7 +4,7 @@
 
 #include "../common_definitions.h"
 #include "../parameters_global.h"
-#include "common_algorithms.h"
+#include "../common_algorithms.h"
 #include "../parameters.h"
 #include "../common.h"
 
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
   gInterpreter->Declare(R"cpp(
        #include "../common_definitions.h"
        #include "../parameters_global.h"
-       #include "common_algorithms.h"
+       #include "../common_algorithms.h"
        #include "../parameters.h"
        #include "../common.h"
   )cpp");
@@ -142,57 +142,63 @@ int main(int argc, char **argv)
     return ! SkipTime(t);
   };
 
-  auto f1 = rdf.Filter( SkipTimeBis, {"timestamp"}, "check time - selected");
+  auto f1 = rdf.Filter( SkipTimeBis, {"timestamp"});
 
   // Diagonal cut (L831)
   auto allDiagonalRPs = [](unsigned int &v_L_2_F,unsigned int &v_L_2_N,unsigned int &v_R_2_F,unsigned int &v_R_2_N){
     return v_L_2_F && v_L_2_N && v_R_2_F && v_R_2_N;
   };
 
-  auto f2 = f1.Filter(allDiagonalRPs, {"v_L_2_F", "v_L_2_N", "v_R_2_F", "v_R_2_N"}, "allDiagonalRPs");
-
-  auto model = ROOT::RDF::TH1DModel("h_timestamp_dgn", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5);
-  auto h_timestamp_dgn = f2.Histo1D(model, "timestamp");
+  auto f2 = f1.Filter(allDiagonalRPs, {"v_L_2_F", "v_L_2_N", "v_R_2_F", "v_R_2_N"});
 
   // Not cut for this filter in original code
   auto isZeroBiasEvent = [](unsigned int &bits){
       return ! ((bits & 512) != 0);
   };
 
-  auto f_zerobias = f2.Filter(isZeroBiasEvent, {"trigger_bits"}, "zero_bias_event");
+  auto model = ROOT::RDF::TH1DModel("h_timestamp_dgn", ";timestamp;rate   (Hz)", int(timestamp_bins), timestamp_min-0.5, timestamp_max+0.5);
+  auto h_timestamp_dgn = f2.Histo1D<unsigned int>(model, "timestamp");
 
-  auto r2 = f2.DefineSlot("h_al", ApplyFineAlignment,  {"timestamp" , "x_L_1_F", "x_L_2_N", "x_L_2_F", "x_R_1_F", "x_R_2_N", "x_R_2_F", "y_L_1_F", "y_L_2_N", "y_L_2_F", "y_R_1_F", "y_R_2_N", "y_R_2_F"});
-//              .Define("h_al_x_L_1_F", GETMEMBER(HitData, L_1_F.x), {"h_al"})
-//              .Define("h_al_x_L_2_N", GETMEMBER(HitData, L_2_N.x), {"h_al"})
-//              .Define("h_al_x_L_2_F", GETMEMBER(HitData, L_2_F.x), {"h_al"})
-//              .Define("h_al_y_L_1_F", GETMEMBER(HitData, L_1_F.y), {"h_al"})
-//              .Define("h_al_y_L_2_N", GETMEMBER(HitData, L_2_N.y), {"h_al"})
-//              .Define("h_al_y_L_2_F", GETMEMBER(HitData, L_2_F.y), {"h_al"})
-//              .Define("h_al_x_R_1_F", GETMEMBER(HitData, R_1_F.x), {"h_al"})
-//              .Define("h_al_x_R_2_N", GETMEMBER(HitData, R_2_N.x), {"h_al"})
-//              .Define("h_al_x_R_2_F", GETMEMBER(HitData, R_2_F.x), {"h_al"})
-//              .Define("h_al_y_R_1_F", GETMEMBER(HitData, R_1_F.y), {"h_al"})
-//              .Define("h_al_y_R_2_N", GETMEMBER(HitData, R_2_N.y), {"h_al"})
-//              .Define("h_al_y_R_2_F", GETMEMBER(HitData, R_2_F.y), {"h_al"});
+  auto f_zerobias = f2.Filter(isZeroBiasEvent, {"trigger_bits"});
 
-  r2.Count().GetValue();
+  auto r2 = f2.Define("h_al", ApplyFineAlignment,  {"timestamp" , "x_L_1_F", "x_L_2_N", "x_L_2_F", "x_R_1_F", "x_R_2_N", "x_R_2_F", "y_L_1_F", "y_L_2_N", "y_L_2_F", "y_R_1_F", "y_R_2_N", "y_R_2_F"})
+              .Define("h_al_x_L_1_F", GETMEMBER(HitData, L_1_F.x), {"h_al"})
+              .Define("h_al_x_L_2_N", GETMEMBER(HitData, L_2_N.x), {"h_al"})
+              .Define("h_al_x_L_2_F", GETMEMBER(HitData, L_2_F.x), {"h_al"})
+              .Define("h_al_y_L_1_F", GETMEMBER(HitData, L_1_F.y), {"h_al"})
+              .Define("h_al_y_L_2_N", GETMEMBER(HitData, L_2_N.y), {"h_al"})
+              .Define("h_al_y_L_2_F", GETMEMBER(HitData, L_2_F.y), {"h_al"})
+              .Define("h_al_x_R_1_F", GETMEMBER(HitData, R_1_F.x), {"h_al"})
+              .Define("h_al_x_R_2_N", GETMEMBER(HitData, R_2_N.x), {"h_al"})
+              .Define("h_al_x_R_2_F", GETMEMBER(HitData, R_2_F.x), {"h_al"})
+              .Define("h_al_y_R_1_F", GETMEMBER(HitData, R_1_F.y), {"h_al"})
+              .Define("h_al_y_R_2_N", GETMEMBER(HitData, R_2_N.y), {"h_al"})
+              .Define("h_al_y_R_2_F", GETMEMBER(HitData, R_2_F.y), {"h_al"});
 
-//   // fill pre-selection histograms (Line 860 - 866)
-//   map<int, ROOT::RDF::TH2DModel>al_nosel_models = {
-//      {0, ROOT::RDF::TH2DModel("h_y_L_1_F_vs_x_L_1_F_al_nosel", ";x^{L,1,F};y^{L,1,F}", 150, -15., 15., 300, -30., +30.)},
-//      {1 , ROOT::RDF::TH2DModel("h_y_L_2_N_vs_x_L_2_N_al_nosel", ";x^{L,2,N};y^{L,2,N}", 150, -15., 15., 300, -30., +30.)},
-//      {2 , ROOT::RDF::TH2DModel("h_y_L_2_F_vs_x_L_2_F_al_nosel", ";x^{L,2,F};y^{L,2,F}", 150, -15., 15., 300, -30., +30.)},
-//      {3 , ROOT::RDF::TH2DModel("h_y_R_1_F_vs_x_R_1_F_al_nosel", ";x^{R,1,F};y^{R,1,F}", 150, -15., 15., 300, -30., +30.)},
-//      {4 , ROOT::RDF::TH2DModel("h_y_R_2_N_vs_x_R_2_N_al_nosel", ";x^{R,2,N};y^{R,2,N}", 150, -15., 15., 300, -30., +30.)},
-//      {5 , ROOT::RDF::TH2DModel("h_y_R_2_F_vs_x_R_2_F_al_nosel", ";x^{R,2,F};y^{R,2,F}", 150, -15., 15., 300, -30., +30.)}
-//   };
-//
-//   auto h_y_L_1_F_vs_x_L_1_F_al_nosel = r2.Histo2D(al_nosel_models[0], "h_al_x_L_1_F", "h_al_y_L_1_F");
-//   auto h_y_L_2_N_vs_x_L_2_N_al_nosel = r2.Histo2D(al_nosel_models[1], "h_al_x_L_2_N", "h_al_y_L_2_N");
-//   auto h_y_L_2_F_vs_x_L_2_F_al_nosel = r2.Histo2D(al_nosel_models[2], "h_al_x_L_2_F", "h_al_y_L_2_F");
-//   auto h_y_R_1_F_vs_x_R_1_F_al_nosel = r2.Histo2D(al_nosel_models[3], "h_al_x_R_1_F", "h_al_y_R_1_F");
-//   auto h_y_R_2_N_vs_x_R_2_N_al_nosel = r2.Histo2D(al_nosel_models[4], "h_al_x_R_2_N", "h_al_y_R_2_N");
-//   auto h_y_R_2_F_vs_x_R_2_F_al_nosel = r2.Histo2D(al_nosel_models[5], "h_al_x_R_2_F", "h_al_y_R_2_F");
+   // fill pre-selection histograms (Line 860 - 866)
+   map<int, ROOT::RDF::TH2DModel>al_nosel_models = {
+      {0, ROOT::RDF::TH2DModel("h_y_L_1_F_vs_x_L_1_F_al_nosel", ";x^{L,1,F};y^{L,1,F}", 150, -15., 15., 300, -30., +30.)},
+      {1 , ROOT::RDF::TH2DModel("h_y_L_2_N_vs_x_L_2_N_al_nosel", ";x^{L,2,N};y^{L,2,N}", 150, -15., 15., 300, -30., +30.)},
+      {2 , ROOT::RDF::TH2DModel("h_y_L_2_F_vs_x_L_2_F_al_nosel", ";x^{L,2,F};y^{L,2,F}", 150, -15., 15., 300, -30., +30.)},
+      {3 , ROOT::RDF::TH2DModel("h_y_R_1_F_vs_x_R_1_F_al_nosel", ";x^{R,1,F};y^{R,1,F}", 150, -15., 15., 300, -30., +30.)},
+      {4 , ROOT::RDF::TH2DModel("h_y_R_2_N_vs_x_R_2_N_al_nosel", ";x^{R,2,N};y^{R,2,N}", 150, -15., 15., 300, -30., +30.)},
+      {5 , ROOT::RDF::TH2DModel("h_y_R_2_F_vs_x_R_2_F_al_nosel", ";x^{R,2,F};y^{R,2,F}", 150, -15., 15., 300, -30., +30.)}
+   };
+
+   auto h_y_L_1_F_vs_x_L_1_F_al_nosel = r2.Histo2D<double, double>(al_nosel_models[0], "h_al_x_L_1_F", "h_al_y_L_1_F");
+   auto h_y_L_2_N_vs_x_L_2_N_al_nosel = r2.Histo2D<double, double>(al_nosel_models[1], "h_al_x_L_2_N", "h_al_y_L_2_N");
+   auto h_y_L_2_F_vs_x_L_2_F_al_nosel = r2.Histo2D<double, double>(al_nosel_models[2], "h_al_x_L_2_F", "h_al_y_L_2_F");
+   auto h_y_R_1_F_vs_x_R_1_F_al_nosel = r2.Histo2D<double, double>(al_nosel_models[3], "h_al_x_R_1_F", "h_al_y_R_1_F");
+   auto h_y_R_2_N_vs_x_R_2_N_al_nosel = r2.Histo2D<double, double>(al_nosel_models[4], "h_al_x_R_2_N", "h_al_y_R_2_N");
+   auto h_y_R_2_F_vs_x_R_2_F_al_nosel = r2.Histo2D<double, double>(al_nosel_models[5], "h_al_x_R_2_F", "h_al_y_R_2_F");
+
+   //h_y_L_1_F_vs_x_L_1_F_al_nosel.GetValue();
+   TStopwatch timer;
+   timer.Start();
+   h_y_L_1_F_vs_x_L_1_F_al_nosel.GetValue();
+   timer.Stop();
+
+   cout << " Cpu time: " << timer.CpuTime() << endl;
 //
 //   auto r3 = r2.Define("kinematics", DoReconstruction , { "h_al" } );
 //

@@ -3,7 +3,7 @@
 
 #include "TMath.h"
 
-#include "../common_definitions.h"
+#include "common_definitions.h"
 
 //----------------------------------------------------------------------------------------------------
 
@@ -321,23 +321,33 @@ HitData ProtonTransport(const Kinematics & /*k*/, const Environment & /*env*/)
     return h;
 }
 
-HitData* ApplyFineAlignment( unsigned int slot, unsigned int &timestamp,
+HitData ApplyFineAlignment( unsigned int &timestamp,
                             double &x_L_1_F, double &x_L_2_N, double &x_L_2_F,
                             double &x_R_1_F, double &x_R_2_N, double &x_R_2_F,
                             double &y_L_1_F, double &y_L_2_N, double &y_L_2_F,
                             double &y_R_1_F, double &y_R_2_N, double &y_R_2_F)
 {
-    static vector<HitData> hitDatas(32);
-    if (slot >= 32) hitDatas.resize(slot+1);
-    auto &h_al =  hitDatas[slot];
+    UnitHitData L_1_F, L_2_N, L_2_F;
 
-    h_al.L_1_F.x = x_L_1_F; h_al.L_1_F.y = y_L_1_F; //L_1_F.x = x_L_1_F;
-    h_al.L_2_N.x = x_L_2_N; h_al.L_2_N.y = y_L_2_N; // L_2_N
-    h_al.L_2_F.x = x_L_2_F; h_al.L_2_F.y = y_L_2_F; // L_2_F
+    L_1_F.x = x_L_1_F; L_1_F.y = y_L_1_F; //L_1_F.x = x_L_1_F;
+    L_2_N.x = x_L_2_N; L_2_N.y = y_L_2_N; // L_2_N
+    L_2_F.x = x_L_2_F; L_2_F.y = y_L_2_F; // L_2_F
 
-    h_al.R_1_F.x = x_R_1_F; h_al.R_1_F.y = y_R_1_F;
-    h_al.R_2_N.x = x_R_2_N; h_al.R_2_N.y = y_R_2_N;
-    h_al.R_2_F.x = x_R_2_F; h_al.R_2_F.y = y_R_2_F;
+    UnitHitData R_1_F, R_2_N, R_2_F;
+
+    R_1_F.x = x_R_1_F; R_1_F.y = y_R_1_F;
+    R_2_N.x = x_R_2_N; R_2_N.y = y_R_2_N;
+    R_2_F.x = x_R_2_F; R_2_F.y = y_R_2_F;
+
+    HitData h_al;
+
+    h_al.L_1_F = L_1_F;
+    h_al.L_2_N = L_2_N;
+    h_al.L_2_F = L_2_F;
+
+    h_al.R_1_F = R_1_F;
+    h_al.R_2_N = R_2_N;
+    h_al.R_2_F = R_2_F;
 
     extern vector<AlignmentSource> alignmentSources;
 
@@ -347,7 +357,7 @@ HitData* ApplyFineAlignment( unsigned int slot, unsigned int &timestamp,
       h_al = h_al.ApplyAlignment(alData);
     }
 
-    return &h_al;
+    return h_al;
 };
 
 Kinematics DoReconstruction(HitData &h)
