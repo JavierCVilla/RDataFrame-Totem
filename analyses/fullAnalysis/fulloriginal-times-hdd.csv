@@ -3,3 +3,7 @@ Date,Dataset,Test,Threads,Execution time
 27-08-2018 02:17,DS2,distributions,0,132.736
 27-08-2018 02:17,DS3,distill,0,27163.72
 27-08-2018 09:50,DS3,distributions,0,531.201
+27-08-2018 12:06,DS4,distill,0,16815.44
+27-08-2018 16:46,DS4,distributions,0,240.566
+27-08-2018 18:10,DS1,distill,0,2898.53
+27-08-2018 18:59,DS1,distributions,0,45.222
