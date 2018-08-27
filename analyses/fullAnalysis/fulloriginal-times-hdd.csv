@@ -1,0 +1,5 @@
+Date,Dataset,Test,Threads,Execution time
+27-08-2018 00:28,DS2,distill,0,6562.76
+27-08-2018 02:17,DS2,distributions,0,132.736
+27-08-2018 02:17,DS3,distill,0,27163.72
+27-08-2018 09:50,DS3,distributions,0,531.201
