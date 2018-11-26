@@ -2,7 +2,6 @@
 import ROOT
 from pyspark import SparkConf, SparkContext, SparkFiles
 
-DEBUG = False
 
 ######################################################################
 # Function to initialize the Spark context. We need to configure:    #
@@ -59,11 +58,11 @@ class DistTree(object):
   def __init__(self, filelist, treename, npartitions):
     # Get number of entries and build the ranges according to npartitions
     nfiles = len(filelist)
-    ranges = BuildRanges(nfiles, npartitions, filelist, treename)
+    ranges = BuildRanges(nfiles, npartitions, filelist)
 
     # Initialize Spark context
     sc = InitSpark()
-
+  
     # Parallelize the ranges with Spark
     self.ranges = sc.parallelize(ranges, npartitions)
 
@@ -72,7 +71,7 @@ class DistTree(object):
     mapperIsCpp  = isinstance(fMap, ROOT.MethodProxy)
     reducerIsCpp = isinstance(fReduce, ROOT.MethodProxy)
     mapperName = reducerName = mapperCode = reducerCode = None
-
+   
     if mapperIsCpp:
       mapperName  = fMap.func_code.co_name
       mapperCode  = GetWrappedFunctionCode(mapperName)
@@ -95,29 +94,24 @@ https://swan006.cern.ch/user/etejedor/edit/SWAN_projects/SWAN_Spark/Spark-Notebo
 
     def mapWrapper(rg):
       import ROOT
-
       ROOT.TH1.AddDirectory(False)
-
-      start = int(rg.start)
-      end = int(rg.end)
-
-      #return [(start,end)]
-
-      chain = ROOT.TChain("TotemNtuple")
-      for f in rg.filelist:
-        chain.Add(f)
-      # We assume 'end' is exclusive
-      chain.SetCacheEntryRange(start, end)
-
-      tdf = ROOT.ROOT.RDataFrame(chain)
-      tdf_r = tdf.Range(start, end)
+      #reader = ROOT.TTreeReader(rg.chain)
+      #reader.SetEntriesRange(rg.start, rg.end)
+      #tdf = ROOT.Experimental.TDataFrame(rg.chain)
+    
+      vec_input_files = ROOT.vector('string')()
+      [vec_input_files.push_back(f) for f in rg.filelist]
+    
+      tdf_r = ROOT.ROOT.RDataFrame("TotemNtuple", vec_input_files)
 
       if mapperIsCpp:
         ROOT.gInterpreter.Declare(mapperCode)
+        #res = ROOT.__getattr__(mapperName)(reader)
         res =  ROOT.__getattr__(mapperName)(tdf_r)
       else:
+        #res = fMap(reader)
         res = fMap(tdf_r)
-
+        
       ## SHARED PTR TO PROXIED OBJECT, DOES NOT WORK
       ## Caused by: java.io.EOFException
       ## at java.io.DataInputStream.readInt(DataInputStream.java:392)
@@ -125,14 +119,14 @@ https://swan006.cern.ch/user/etejedor/edit/SWAN_projects/SWAN_Spark/Spark-Notebo
       #h = ROOT.std.shared_ptr("TH1D")()
       #h.reset(ROOT.AddressOf(ref))
       #return h
-
+    
       # Quick hack with extra copies and just checking for TH1F and TH2F return values
       if isinstance(res, list):
         return [ ROOT.TH1D(h.GetValue()) if isinstance(h.GetValue(), ROOT.TH1D) else ROOT.TH2D(h.GetValue()) for h in res ]
       else:
         if isinstance(res.GetValue(), ROOT.TH1D): return ROOT.TH1D(res.GetValue())
         else:                                     return ROOT.TH2D(res.GetValue())
-
+    
       ## Trigger the event loop, then return the proxy
       ## DOES NOT WORK:
       ## Caused by: java.io.EOFException
@@ -142,18 +136,17 @@ https://swan006.cern.ch/user/etejedor/edit/SWAN_projects/SWAN_Spark/Spark-Notebo
       #else:
       #  res.GetValue()
       #return res
-
+      
     def reduceWrapper(x, y):
-      #return x + y
       if reducerIsCpp:
         import ROOT
         ROOT.gInterpreter.Declare(reducerCode)
         return ROOT.__getattr__(reducerName)(x, y)
       else:
         return fReduce(x, y) 
-
+      
     return self.ranges.map(mapWrapper).treeReduce(reduceWrapper)
-
+ 
   def GetPartitions(self):
     return self.ranges.collect()
 
@@ -164,81 +157,37 @@ https://swan006.cern.ch/user/etejedor/edit/SWAN_projects/SWAN_Spark/Spark-Notebo
 # and is the basis for parallelization.                            #
 ####################################################################
 
-def GetClusters(filelist, treename):
-  import ROOT
-
-  clusters = []
-  offset = 0
-  for filename in filelist:
-    f = ROOT.TFile.Open(filename)
-    t = f.Get(treename)
-
-    entries = t.GetEntriesFast()
-    it = t.GetClusterIterator(0)
-    start = it()
-    end = 0
-
-    while start < entries:
-      end = it()
-      clusters.append((start + offset, end + offset, offset, filename))
-      start = end
-
-    offset += entries
-
-  return clusters
-
-def BuildRanges(nfiles, npartitions, filelist, treename):
-  clusters = GetClusters(filelist, treename)
-  numclusters = len(clusters)
-  partSize = numclusters / npartitions
-  remainder = numclusters % npartitions
-
-  if DEBUG:
-    print("Num clusters", numclusters)
-    print("Partsize", partSize)
-    print("Remainder", remainder)
-    print("Initial clusters", clusters)
-
+def BuildRanges(nfiles, npartitions, filelist):
   i = 0
   ranges = []
-  entries_to_process = 0
-  while i < numclusters:
-    index_start = i
-    start = clusters[i][0]
-    i = i + partSize
+  partSize = nfiles / npartitions
+  remainder = nfiles % npartitions
+  
+  #print("Nentries", nentries)
+  #print("Partsize", partSize)
+  #print("Remainder", remainder)
+  while i < nfiles:
+    start = i
+    singleRange = Range()
+    remainderPerPart = 0
     if remainder > 0:
+        remainderPerPart += 1
+        remainder -= 1
+    while i < start + partSize + remainderPerPart:
+      singleRange.append(filelist.pop())
       i += 1
-      remainder -= 1
-    index_end = i
-    if i == numclusters:
-      end = clusters[-1][1]
-    else:
-      end = clusters[i-1][1]
-
-    range_files = []
-    for idx in range(index_start, index_end):
-      current_file = clusters[idx][3]
-      if range_files and range_files[-1] == current_file:
-        continue
-      range_files.append(clusters[idx][3])
-
-    offset_first_cluster = clusters[index_start][2]
-    ranges.append(Range(start - offset_first_cluster, end - offset_first_cluster, range_files))
-    entries_to_process += (end - start)
-
-  if DEBUG:
-    print("Entries to process", entries_to_process)
-    print("Final ranges", ranges)
-
+    ranges.append(singleRange)
   return ranges
 
+
 class Range(object):
-  def __init__(self, start, end, filelist):
-    self.start = start
-    self.end = end
-    self.filelist = filelist
+  def __init__(self):
+    self.filelist = []
 
   def __repr__(self):
-    return "(" + str(self.start) + "," + str(self.end) + "), " + str(self.filelist)
+    return "(" + str(self.filelist) + ")"
+
+  def append(self, filename):
+    self.filelist.append(filename)
 
 
