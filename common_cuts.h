@@ -102,10 +102,8 @@ bool Analysis::EvaluateCuts(const HitData & h, const Kinematics &k, CutData &cd)
 
 //----------------------------------------------------------------------------------------------------
 
-CutData EvaluateCutsRDF( const HitData &h_al, const Kinematics &k ){
+CutData EvaluateCutsRDF( const HitData &h_al, const Kinematics &k, Analysis &anal ){
     CutData cd;
-    extern Analysis anal;
-
     bool select = anal.EvaluateCuts( h_al, k, cd);
     cd.select = select;
     return cd;
