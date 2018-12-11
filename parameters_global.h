@@ -1,3 +1,6 @@
+#ifndef _parameters_global_h_
+#define _parameters_global_h_
+
 #include <string>
 #include <vector>
 #include <map>
@@ -66,3 +69,4 @@ void Init_global_45t_56b()
     anal.th_y_hcut_L = 102E-6; anal.th_y_hcut_R = 102E-6; anal.th_y_hcut = 100E-6;
 }
 
+#endif

@@ -1,3 +1,6 @@
+#ifndef _parameters_h_
+#define _parameters_h_
+
 //#include "parameters_global.h"
 
 double timestamp_min = 20.9E3, timestamp_max = 31.5E3;
@@ -126,3 +129,4 @@ void Init_45t_56b()
 #endif
 }
 
+#endif
