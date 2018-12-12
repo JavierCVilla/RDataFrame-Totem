@@ -1,6 +1,25 @@
 # RDataFrame-Totem
 ---
 
+## How to run the analysis on Helix Nebula
+
+1. Log in to SWAN Helix Nebula
+2. On the CERNBOX tab, open a new terminal (icon `>_` on the top right corner)
+3. Clone this repo:
+
+   ```
+   git clone https://github.com/JavierCVilla/RDataFrame-Totem.git
+   ```
+
+4. Open the python notebook (`DistillDistibution-AllDatasets.ipynb`) from the SWAN Interface:
+5. Start the Spark cluster connection, the default configuration is ready to run the analysis
+6. Once connected, execute cells 1 to 7, this should be fairly fast since no computation will be triggered yet
+7. Cell number 8 initializes the Spark job and starts the event loop:
+   - It may take some minutes for the creation of ranges
+   - After a couple of minutes, you will see the Spark monitoring with the job progress
+8. Once finished, the rest of cells will show some results and save them to disk
+
+
 ## How to run `distill.py`
 
 **Requirements**
